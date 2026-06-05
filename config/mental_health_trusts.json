@@ -3,6 +3,7 @@
     "name": "Birmingham and Solihull Mental Health NHS Foundation Trust",
     "url": "https://www.bsmhft.nhs.uk/",
     "start_urls": [
+      "https://www.bsmhft.nhs.uk/about-us/corporate-documents/trust-board-papers/",
       "https://www.bsmhft.nhs.uk/about-us/trust-board/"
     ]
   },

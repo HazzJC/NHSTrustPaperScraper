@@ -314,3 +314,179 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// ---------------------------------------------------------------------------
+// ScrapeDashboard — wires the new "Scrape Board Papers" control card
+// ---------------------------------------------------------------------------
+(function ScrapeDashboard() {
+    'use strict';
+
+    let currentJobId = null;
+    let eventSource = null;
+
+    const startBtn      = document.getElementById('startScrapeBtn');
+    const cancelBtn     = document.getElementById('cancelScrapeBtn');
+    const logPanel      = document.getElementById('logPanel');
+    const logOutput     = document.getElementById('logOutput');
+    const clearLogBtn   = document.getElementById('clearLogBtn');
+    const scrapeSummary = document.getElementById('scrapeSummary');
+    const scrapeProgress= document.getElementById('scrapeProgress');
+    const trustSelect   = document.getElementById('trustSelect');
+    const selectAllBtn  = document.getElementById('selectAllTrustsBtn');
+    const clearAllBtn   = document.getElementById('clearAllTrustsBtn');
+    const trustSpinner  = document.getElementById('trustLoadingSpinner');
+
+    if (!startBtn) return; // guard if card not present
+
+    // ---- Populate trust list -----------------------------------------------
+    function loadTrusts() {
+        if (trustSpinner) trustSpinner.classList.remove('d-none');
+        fetch('/scrape/trusts')
+            .then(r => r.json())
+            .then(trusts => {
+                trustSelect.innerHTML = '';
+                trusts.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.textContent = t.name;
+                    trustSelect.appendChild(opt);
+                });
+            })
+            .catch(() => {
+                trustSelect.innerHTML = '<option disabled>Failed to load trusts</option>';
+            })
+            .finally(() => {
+                if (trustSpinner) trustSpinner.classList.add('d-none');
+            });
+    }
+
+    selectAllBtn && selectAllBtn.addEventListener('click', () => {
+        Array.from(trustSelect.options).forEach(o => o.selected = true);
+    });
+    clearAllBtn && clearAllBtn.addEventListener('click', () => {
+        Array.from(trustSelect.options).forEach(o => o.selected = false);
+    });
+
+    // ---- Log helpers ---------------------------------------------------------
+    function appendLog(text) {
+        logOutput.textContent += text + '\n';
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    clearLogBtn && clearLogBtn.addEventListener('click', () => {
+        logOutput.textContent = '';
+    });
+
+    // ---- Collect form state --------------------------------------------------
+    function getSelectedTypes() {
+        const types = [];
+        ['typeBoard','typeSupp','typeStrategy','typeDigital'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.checked) types.push(el.value);
+        });
+        return types.length ? types : ['board'];
+    }
+
+    function getSelectedTrusts() {
+        const selected = Array.from(trustSelect.selectedOptions).map(o => o.value);
+        return selected.length ? selected : null; // null = all 47
+    }
+
+    // ---- SSE handler ---------------------------------------------------------
+    function handleSseMessage(evt) {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+
+        const { event, trust, index, total, found, downloaded, error, message } = msg;
+
+        if (event === 'trust_start') {
+            appendLog(`[${index}/${total}] ${trust}`);
+            if (scrapeProgress) scrapeProgress.textContent = `${index} / ${total} trusts`;
+        } else if (event === 'trust_done') {
+            appendLog(`  ✓ found ${found || 0}, downloaded ${downloaded || 0}`);
+        } else if (event === 'trust_error') {
+            appendLog(`  ✗ ERROR: ${error || 'unknown error'}`);
+        } else if (event === 'candidate_found') {
+            appendLog(`  → [${msg.report_type}] ${msg.date} ${msg.url}`);
+        } else if (event === 'done') {
+            appendLog(`\nDone. ${msg.completed}/${msg.total} trusts processed, ${msg.downloads} file(s) downloaded.`);
+            setRunning(false);
+            scrapeSummary.classList.remove('d-none');
+            scrapeSummary.textContent =
+                `Scrape complete: ${msg.completed} trusts processed, ${msg.downloads} file(s) downloaded.`;
+            if (eventSource) { eventSource.close(); eventSource = null; }
+        } else if (event === 'cancelled') {
+            appendLog('\nJob cancelled.');
+            setRunning(false);
+            if (eventSource) { eventSource.close(); eventSource = null; }
+        }
+    }
+
+    // ---- UI state toggle -----------------------------------------------------
+    function setRunning(running) {
+        startBtn.disabled = running;
+        cancelBtn.classList.toggle('d-none', !running);
+        if (!running && scrapeProgress) scrapeProgress.textContent = '';
+    }
+
+    // ---- Start ---------------------------------------------------------------
+    startBtn.addEventListener('click', () => {
+        const types = getSelectedTypes();
+        const trustNames = getSelectedTrusts();
+        const allMatches = document.getElementById('allMatchesChk').checked;
+        const dryRun = document.getElementById('dryRunChk').checked;
+        const limitPerType = parseInt(document.getElementById('limitPerType').value, 10) || 1;
+
+        scrapeSummary.classList.add('d-none');
+        logPanel.classList.remove('d-none');
+        logOutput.textContent = '';
+        setRunning(true);
+        appendLog(`Starting scrape: types=[${types.join(', ')}], trusts=${trustNames ? trustNames.length + ' selected' : 'all 47'}, dry_run=${dryRun}`);
+
+        fetch('/scrape/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                trust_names: trustNames,
+                types: types,
+                all_matches: allMatches,
+                limit_per_type: limitPerType,
+                dry_run: dryRun,
+            }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                appendLog('Error: ' + data.error);
+                setRunning(false);
+                return;
+            }
+            currentJobId = data.job_id;
+            appendLog(`Job ${currentJobId} started (${data.trust_count} trusts)`);
+
+            eventSource = new EventSource(`/scrape/stream/${currentJobId}`);
+            eventSource.onmessage = handleSseMessage;
+            eventSource.onerror = () => {
+                appendLog('[connection lost]');
+                setRunning(false);
+                eventSource.close();
+                eventSource = null;
+            };
+        })
+        .catch(err => {
+            appendLog('Request failed: ' + err);
+            setRunning(false);
+        });
+    });
+
+    // ---- Cancel --------------------------------------------------------------
+    cancelBtn.addEventListener('click', () => {
+        if (!currentJobId) return;
+        fetch(`/scrape/cancel/${currentJobId}`, { method: 'DELETE' })
+            .catch(() => {});
+        appendLog('Cancellation requested…');
+    });
+
+    // ---- Init ----------------------------------------------------------------
+    loadTrusts();
+}());

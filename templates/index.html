@@ -31,6 +31,9 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/">NHS Board Papers Analyzer</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/intelligence">Sales Intelligence</a>
+            </div>
         </div>
     </nav>
 
@@ -62,6 +65,96 @@
                                 Last crawl: {{ results.last_run }}
                             </div>
                         {% endif %}
+                    </div>
+                </div>
+
+                <!-- Scrape Control Dashboard -->
+                <div class="card mb-4" id="scrapeControlsCard">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="mb-0">Scrape Board Papers — 47 NHS Mental Health Trusts</h3>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Report type toggles -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Report Types</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeBoard" value="board" checked>
+                                    <label class="form-check-label" for="typeBoard">Board Papers</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeSupp" value="supplementary">
+                                    <label class="form-check-label" for="typeSupp">Supplementary Material</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeStrategy" value="strategy">
+                                    <label class="form-check-label" for="typeStrategy">Strategic Reporting</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="typeDigital" value="digital_strategy">
+                                    <label class="form-check-label" for="typeDigital">Digital Strategy</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trust multi-select -->
+                        <div class="mb-3">
+                            <label for="trustSelect" class="form-label fw-semibold">
+                                Trusts
+                                <button id="selectAllTrustsBtn" type="button" class="btn btn-sm btn-link p-0 ms-2">All</button>
+                                <button id="clearAllTrustsBtn" type="button" class="btn btn-sm btn-link p-0 ms-1">None</button>
+                                <span id="trustLoadingSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+                            </label>
+                            <select id="trustSelect" class="form-select" multiple size="8">
+                                <option disabled>Loading trusts…</option>
+                            </select>
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple. Leave all deselected to scrape all 47 trusts.</small>
+                        </div>
+
+                        <!-- Options row -->
+                        <div class="row mb-3 g-3 align-items-center">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allMatchesChk">
+                                    <label class="form-check-label" for="allMatchesChk">All matches (not just latest)</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dryRunChk">
+                                    <label class="form-check-label" for="dryRunChk">Dry run (no downloads)</label>
+                                </div>
+                            </div>
+                            <div class="col-auto d-flex align-items-center gap-2">
+                                <label for="limitPerType" class="form-label mb-0">Limit per type</label>
+                                <input id="limitPerType" type="number" class="form-control form-control-sm"
+                                       style="width:70px" value="1" min="1" max="10">
+                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="mb-3">
+                            <button id="startScrapeBtn" type="button" class="btn btn-success me-2">Start Scrape</button>
+                            <button id="cancelScrapeBtn" type="button" class="btn btn-danger d-none me-2">Cancel</button>
+                            <span id="scrapeProgress" class="text-muted small"></span>
+                        </div>
+
+                        <!-- Live log panel -->
+                        <div id="logPanel" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-semibold small">Live Log</span>
+                                <button id="clearLogBtn" type="button" class="btn btn-sm btn-outline-secondary">Clear</button>
+                            </div>
+                            <div id="logOutput"
+                                 class="bg-dark text-light font-monospace small p-2 rounded"
+                                 style="height:240px; overflow-y:auto; white-space:pre-wrap; word-break:break-all;">
+                            </div>
+                        </div>
+
+                        <!-- Post-run summary -->
+                        <div id="scrapeSummary" class="mt-3 d-none alert alert-success"></div>
+
                     </div>
                 </div>
 
