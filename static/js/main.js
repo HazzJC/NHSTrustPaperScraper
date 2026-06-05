@@ -324,17 +324,23 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentJobId = null;
     let eventSource = null;
 
-    const startBtn      = document.getElementById('startScrapeBtn');
-    const cancelBtn     = document.getElementById('cancelScrapeBtn');
-    const logPanel      = document.getElementById('logPanel');
-    const logOutput     = document.getElementById('logOutput');
-    const clearLogBtn   = document.getElementById('clearLogBtn');
-    const scrapeSummary = document.getElementById('scrapeSummary');
-    const scrapeProgress= document.getElementById('scrapeProgress');
-    const trustSelect   = document.getElementById('trustSelect');
-    const selectAllBtn  = document.getElementById('selectAllTrustsBtn');
-    const clearAllBtn   = document.getElementById('clearAllTrustsBtn');
-    const trustSpinner  = document.getElementById('trustLoadingSpinner');
+    const startBtn           = document.getElementById('startScrapeBtn');
+    const cancelBtn          = document.getElementById('cancelScrapeBtn');
+    const logPanel           = document.getElementById('logPanel');
+    const logOutput          = document.getElementById('logOutput');
+    const clearLogBtn        = document.getElementById('clearLogBtn');
+    const scrapeSummary      = document.getElementById('scrapeSummary');
+    const scrapeProgress     = document.getElementById('scrapeProgress');
+    const trustSelect        = document.getElementById('trustSelect');
+    const selectAllBtn       = document.getElementById('selectAllTrustsBtn');
+    const clearAllBtn        = document.getElementById('clearAllTrustsBtn');
+    const trustSpinner       = document.getElementById('trustLoadingSpinner');
+    const resultsTableSection= document.getElementById('resultsTableSection');
+    const resultsTableBody   = document.getElementById('resultsTableBody');
+    const exportCsvBtn       = document.getElementById('exportResultsCsvBtn');
+
+    let lastJobId = null;
+    let resultsData = [];
 
     if (!startBtn) return; // guard if card not present
 
@@ -392,6 +398,28 @@ document.addEventListener('DOMContentLoaded', function() {
         return selected.length ? selected : null; // null = all 47
     }
 
+    function getDateFilters() {
+        const filters = {};
+        [['typeBoard','board'],['typeSupp','supplementary'],['typeStrategy','strategy'],['typeDigital','digital_strategy']].forEach(([cbId, type]) => {
+            const cb = document.getElementById(cbId);
+            if (cb && cb.checked) {
+                const input = document.getElementById('dateFilter_' + type);
+                filters[type] = input ? (parseInt(input.value, 10) || 0) : 0;
+            }
+        });
+        return filters;
+    }
+
+    // ---- Show/hide date filter rows when type checkboxes change ---------------
+    [['typeBoard','board'],['typeSupp','supplementary'],['typeStrategy','strategy'],['typeDigital','digital_strategy']].forEach(([cbId, type]) => {
+        const cb = document.getElementById(cbId);
+        if (!cb) return;
+        cb.addEventListener('change', () => {
+            const row = document.getElementById('dfRow_' + type);
+            if (row) row.classList.toggle('d-none', !cb.checked);
+        });
+    });
+
     // ---- SSE handler ---------------------------------------------------------
     function handleSseMessage(evt) {
         let msg;
@@ -408,13 +436,30 @@ document.addEventListener('DOMContentLoaded', function() {
             appendLog(`  ✗ ERROR: ${error || 'unknown error'}`);
         } else if (event === 'candidate_found') {
             appendLog(`  → [${msg.report_type}] ${msg.date} ${msg.url}`);
+        } else if (event === 'candidate_skipped') {
+            appendLog(`  ↩ [already exists] ${msg.url}`);
+        } else if (event === 'trust_retry') {
+            appendLog(`  ↺ [${msg.trust}] Cached pages empty — running full crawl`);
+        } else if (event === 'page_scan') {
+            appendLog(`    · ${msg.url}`);
         } else if (event === 'done') {
-            appendLog(`\nDone. ${msg.completed}/${msg.total} trusts processed, ${msg.downloads} file(s) downloaded.`);
+            const failCount = msg.failures || 0;
+            appendLog(`\nDone. ${msg.completed}/${msg.total} trusts processed, ${msg.downloads} file(s) downloaded.${failCount > 0 ? ` ${failCount} failure(s).` : ''}`);
             setRunning(false);
-            scrapeSummary.classList.remove('d-none');
-            scrapeSummary.textContent =
-                `Scrape complete: ${msg.completed} trusts processed, ${msg.downloads} file(s) downloaded.`;
+            scrapeSummary.classList.remove('d-none', 'alert-success', 'alert-warning');
+            scrapeSummary.classList.add(failCount > 0 ? 'alert-warning' : 'alert-success');
+            let summaryHtml = `Scrape complete: ${msg.completed} trusts processed, ${msg.downloads} file(s) downloaded.`;
+            if (failCount > 0) {
+                const names = (msg.failed_names || []).map(n => `<li>${n}</li>`).join('');
+                summaryHtml += `<br><strong>${failCount} trust(s) had no results or errors:</strong><ul class="mb-0 mt-1">${names}</ul>`;
+            }
+            scrapeSummary.innerHTML = summaryHtml;
             if (eventSource) { eventSource.close(); eventSource = null; }
+            // Load results table
+            if (currentJobId) {
+                lastJobId = currentJobId;
+                fetchResultsTable(currentJobId);
+            }
         } else if (event === 'cancelled') {
             appendLog('\nJob cancelled.');
             setRunning(false);
@@ -436,12 +481,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const allMatches = document.getElementById('allMatchesChk').checked;
         const dryRun = document.getElementById('dryRunChk').checked;
         const limitPerType = parseInt(document.getElementById('limitPerType').value, 10) || 1;
+        const parallelTrusts = parseInt(document.getElementById('parallelTrusts').value, 10) || 5;
+        const maxPages = parseInt(document.getElementById('maxPages').value, 10) || 60;
+        const crawlDelay = parseFloat(document.getElementById('crawlDelay').value) || 0.5;
+        const ignoreCache = document.getElementById('ignoreCacheChk').checked;
+        const verbose = document.getElementById('verboseChk').checked;
+        const dateFilters = getDateFilters();
 
         scrapeSummary.classList.add('d-none');
+        if (resultsTableSection) resultsTableSection.classList.add('d-none');
         logPanel.classList.remove('d-none');
         logOutput.textContent = '';
         setRunning(true);
-        appendLog(`Starting scrape: types=[${types.join(', ')}], trusts=${trustNames ? trustNames.length + ' selected' : 'all 47'}, dry_run=${dryRun}`);
+        appendLog(`Starting scrape: types=[${types.join(', ')}], trusts=${trustNames ? trustNames.length + ' selected' : 'all 47'}, workers=${parallelTrusts}, dry_run=${dryRun}`);
 
         fetch('/scrape/start', {
             method: 'POST',
@@ -452,6 +504,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 all_matches: allMatches,
                 limit_per_type: limitPerType,
                 dry_run: dryRun,
+                parallel_trusts: parallelTrusts,
+                date_filters: dateFilters,
+                max_pages: maxPages,
+                crawl_delay: crawlDelay,
+                ignore_cache: ignoreCache,
+                verbose: verbose,
             }),
         })
         .then(r => r.json())
@@ -485,6 +543,63 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/scrape/cancel/${currentJobId}`, { method: 'DELETE' })
             .catch(() => {});
         appendLog('Cancellation requested…');
+    });
+
+    // ---- Results table -------------------------------------------------------
+    const TYPE_LABELS = {
+        board: 'Board Papers',
+        supplementary: 'Supplementary',
+        strategy: 'Strategic Reporting',
+        digital_strategy: 'Digital Strategy',
+    };
+    const TYPE_KEYS = ['board', 'supplementary', 'strategy', 'digital_strategy'];
+
+    function fetchResultsTable(jobId) {
+        fetch(`/scrape/results/${jobId}`)
+            .then(r => r.json())
+            .then(rows => {
+                resultsData = rows;
+                renderResultsTable(rows);
+                if (resultsTableSection) resultsTableSection.classList.remove('d-none');
+            })
+            .catch(() => {});
+    }
+
+    function renderResultsTable(rows) {
+        if (!resultsTableBody) return;
+        resultsTableBody.innerHTML = '';
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            let html = `<td>${row.trust}</td>`;
+            TYPE_KEYS.forEach(key => {
+                const val = row[key];
+                if (val) {
+                    html += `<td class="text-success fw-semibold">${val}</td>`;
+                } else {
+                    html += `<td class="text-muted">—</td>`;
+                }
+            });
+            tr.innerHTML = html;
+            resultsTableBody.appendChild(tr);
+        });
+    }
+
+    exportCsvBtn && exportCsvBtn.addEventListener('click', () => {
+        if (!resultsData.length) return;
+        const header = ['Trust', ...TYPE_KEYS.map(k => TYPE_LABELS[k])];
+        const lines = [header.map(h => `"${h}"`).join(',')];
+        resultsData.forEach(row => {
+            const cells = [row.trust, ...TYPE_KEYS.map(k => row[k] || '—')];
+            lines.push(cells.map(c => `"${c}"`).join(','));
+        });
+        const csv = lines.join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `scrape-results-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     });
 
     // ---- Init ----------------------------------------------------------------

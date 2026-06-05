@@ -4,6 +4,7 @@ import datetime as dt
 import email.utils
 import threading
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -46,32 +47,50 @@ def discover_candidates(
     selected_types: set[str],
     stop_event: threading.Event | None = None,
     cached_pages: list[str] | None = None,
+    fast_check: bool = False,
+    on_page_scan: Callable[[str], None] | None = None,
 ) -> list[Candidate]:
-    trust_url = trust.url or discover_official_site(session, trust, timeout)
-    if not trust_url:
-        print("  Could not discover official NHS website.")
-        return []
+    """Crawl a trust's website and return document candidates.
 
-    allowed_domains = {domain_for(trust_url)}
-    allowed_domains.update(domain_for(url) for url in trust.start_urls)
-    allowed_domains.update(
-        domain.lower().removeprefix("www.") for domain in trust.allowed_domains
-    )
-    if cached_pages:
-        allowed_domains.update(domain_for(url) for url in cached_pages)
+    fast_check=True: only fetch the cached_pages (skip homepage/start_urls/sitemaps).
+    on_page_scan: called with each page URL just before it is fetched (verbose mode).
+    """
+    if fast_check:
+        # Quick pass — only revisit previously-known good pages
+        if not cached_pages:
+            return []
+        queue: list[tuple[int, str]] = [(200, url) for url in cached_pages]
+        allowed_domains: set[str] = {domain_for(url) for url in cached_pages}
+        allowed_domains.update(
+            domain.lower().removeprefix("www.") for domain in trust.allowed_domains
+        )
+    else:
+        trust_url = trust.url or discover_official_site(session, trust, timeout)
+        if not trust_url:
+            print("  Could not discover official NHS website.")
+            return []
 
-    queue: list[tuple[int, str]] = [(100, trust_url)]
-    for url in trust.start_urls:
-        queue.append((150, urljoin(trust_url, url)))
-    # Previously-successful source pages jump straight to the front of the queue
-    for url in (cached_pages or []):
-        queue.append((200, url))
-    for path in COMMON_PATHS:
-        queue.append((60, urljoin(trust_url, path)))
-    for url in sitemap_urls(
-        session, trust_url, timeout=timeout, selected_types=selected_types
-    ):
-        queue.append((80 + page_relevance_score(url, selected_types), url))
+        allowed_domains = {domain_for(trust_url)}
+        allowed_domains.update(domain_for(url) for url in trust.start_urls)
+        allowed_domains.update(
+            domain.lower().removeprefix("www.") for domain in trust.allowed_domains
+        )
+        if cached_pages:
+            allowed_domains.update(domain_for(url) for url in cached_pages)
+
+        queue = [(100, trust_url)]
+        for url in trust.start_urls:
+            queue.append((150, urljoin(trust_url, url)))
+        # Previously-successful source pages jump straight to the front of the queue
+        for url in (cached_pages or []):
+            queue.append((200, url))
+        for path in COMMON_PATHS:
+            queue.append((60, urljoin(trust_url, path)))
+        for url in sitemap_urls(
+            session, trust_url, timeout=timeout, selected_types=selected_types
+        ):
+            queue.append((80 + page_relevance_score(url, selected_types), url))
+
     queue.sort(reverse=True)
 
     seen_pages: set[str] = set()
@@ -91,6 +110,8 @@ def discover_candidates(
 
         seen_pages.add(page_url)
         print(f"  Scanning {page_url}")
+        if on_page_scan:
+            on_page_scan(page_url)
 
         result = request_page(session, page_url, timeout, crawl_delay)
         if not result:
@@ -102,7 +123,7 @@ def discover_candidates(
         # On the homepage, parse structural nav/header elements and queue all
         # internal links at score 40 so intermediate navigation pages (e.g.
         # /corporate-documents/) are explored even when they have no keywords.
-        if len(seen_pages) == 1:
+        if not fast_check and len(seen_pages) == 1:
             for nav_url in nav_links_from_html(html, final_page_url):
                 if nav_url not in seen_pages and nav_url not in queued_urls:
                     queue.append((40, nav_url))
@@ -150,7 +171,7 @@ def discover_candidates(
                 )
                 continue
 
-            if looks_like_html_page(link_url):
+            if not fast_check and looks_like_html_page(link_url):
                 add_queue_url(
                     queue,
                     link_url,
@@ -191,7 +212,18 @@ def selected_candidates(
     *,
     all_matches: bool,
     limit_per_type: int,
+    cutoff_dates: dict[str, dt.date] | None = None,
 ) -> list[Candidate]:
+    if cutoff_dates:
+        filtered = []
+        for c in candidates:
+            cutoff = cutoff_dates.get(c.report_type)
+            # Only exclude if we have both a cutoff and a confirmed date older than it
+            if cutoff and c.date is not None and c.date < cutoff:
+                continue
+            filtered.append(c)
+        candidates = filtered
+
     candidates.sort(
         key=lambda item: (
             item.report_type,

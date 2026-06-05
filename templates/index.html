@@ -98,6 +98,30 @@
                             </div>
                         </div>
 
+                        <!-- Date Filters -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Lookback Period <small class="text-muted fw-normal">(months per type, 0 = no limit)</small></label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="date-filter-item" id="dfRow_board">
+                                    <label class="form-label small mb-1" for="dateFilter_board">Board Papers</label>
+                                    <input id="dateFilter_board" type="number" class="form-control form-control-sm" style="width:75px" value="3" min="0" max="120">
+                                </div>
+                                <div class="date-filter-item d-none" id="dfRow_supplementary">
+                                    <label class="form-label small mb-1" for="dateFilter_supplementary">Supplementary</label>
+                                    <input id="dateFilter_supplementary" type="number" class="form-control form-control-sm" style="width:75px" value="3" min="0" max="120">
+                                </div>
+                                <div class="date-filter-item d-none" id="dfRow_strategy">
+                                    <label class="form-label small mb-1" for="dateFilter_strategy">Strategic Reporting</label>
+                                    <input id="dateFilter_strategy" type="number" class="form-control form-control-sm" style="width:75px" value="24" min="0" max="120">
+                                </div>
+                                <div class="date-filter-item d-none" id="dfRow_digital_strategy">
+                                    <label class="form-label small mb-1" for="dateFilter_digital_strategy">Digital Strategy</label>
+                                    <input id="dateFilter_digital_strategy" type="number" class="form-control form-control-sm" style="width:75px" value="24" min="0" max="120">
+                                </div>
+                            </div>
+                            <small class="text-muted">Papers older than this window are excluded. 0 = no restriction.</small>
+                        </div>
+
                         <!-- Trust multi-select -->
                         <div class="mb-3">
                             <label for="trustSelect" class="form-label fw-semibold">
@@ -131,6 +155,40 @@
                                 <input id="limitPerType" type="number" class="form-control form-control-sm"
                                        style="width:70px" value="1" min="1" max="10">
                             </div>
+                            <div class="col-auto d-flex align-items-center gap-2">
+                                <label for="parallelTrusts" class="form-label mb-0">Parallel workers</label>
+                                <input id="parallelTrusts" type="number" class="form-control form-control-sm"
+                                       style="width:70px" value="5" min="1" max="10">
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options (collapsible) -->
+                        <div class="mb-3">
+                            <a class="text-secondary small" data-bs-toggle="collapse" href="#advancedOptions" role="button" aria-expanded="false">
+                                ▶ Advanced Options
+                            </a>
+                            <div class="collapse mt-2" id="advancedOptions">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-auto">
+                                        <label for="maxPages" class="form-label small mb-1">Max pages per site</label>
+                                        <input id="maxPages" type="number" class="form-control form-control-sm" style="width:80px" value="60" min="10" max="200">
+                                    </div>
+                                    <div class="col-auto">
+                                        <label for="crawlDelay" class="form-label small mb-1">Crawl delay (s)</label>
+                                        <input id="crawlDelay" type="number" class="form-control form-control-sm" style="width:80px" value="0.5" min="0" max="5" step="0.1">
+                                    </div>
+                                    <div class="col-auto d-flex flex-column gap-1">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="ignoreCacheChk">
+                                            <label class="form-check-label small" for="ignoreCacheChk">Ignore discovery cache</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="verboseChk">
+                                            <label class="form-check-label small" for="verboseChk">Verbose log (show page scans)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Action buttons -->
@@ -154,6 +212,28 @@
 
                         <!-- Post-run summary -->
                         <div id="scrapeSummary" class="mt-3 d-none alert alert-success"></div>
+
+                        <!-- Post-run results table -->
+                        <div id="resultsTableSection" class="d-none mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold">Results by Trust</span>
+                                <button id="exportResultsCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Export CSV</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="resultsTable" class="table table-sm table-bordered table-hover small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Trust</th>
+                                            <th>Board Papers</th>
+                                            <th>Supplementary</th>
+                                            <th>Strategic Reporting</th>
+                                            <th>Digital Strategy</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
 
                     </div>
                 </div>

@@ -108,11 +108,17 @@ def download_candidate(
     output_dir: Path,
     timeout: int,
     dry_run: bool,
-) -> Path | None:
+) -> tuple[Path | None, bool]:
+    """Return (path, already_existed). already_existed=True means the file was skipped."""
     if dry_run:
         path = output_path_for(trust, candidate, output_dir=output_dir, response=None)
         print(f"  Would download [{candidate.report_type}] to {path}")
-        return None
+        return None, False
+
+    expected_path = output_path_for(trust, candidate, output_dir=output_dir, response=None)
+    if expected_path.exists():
+        print(f"  Already downloaded, skipping: {expected_path.name}")
+        return expected_path, True
 
     response = session.get(candidate.url, stream=True, timeout=timeout)
     response.raise_for_status()
@@ -127,4 +133,4 @@ def download_candidate(
                 fh.write(chunk)
 
     write_metadata(trust, candidate, output_dir=output_dir, file_path=file_path)
-    return file_path
+    return file_path, False

@@ -347,6 +347,15 @@ def scrape_start():
     all_matches = bool(data.get("all_matches", False))
     limit_per_type = int(data.get("limit_per_type", 1))
     dry_run = bool(data.get("dry_run", False))
+    parallel_trusts = max(1, min(int(data.get("parallel_trusts", 5)), 10))
+    max_pages = max(10, min(int(data.get("max_pages", 60)), 200))
+    crawl_delay = max(0.0, min(float(data.get("crawl_delay", 0.5)), 5.0))
+    ignore_cache = bool(data.get("ignore_cache", False))
+    verbose = bool(data.get("verbose", False))
+
+    # date_filters: {type: months_lookback, 0=no_limit}
+    raw_filters = data.get("date_filters") or {}
+    date_filters = {k: int(v) for k, v in raw_filters.items() if isinstance(v, (int, float, str))}
 
     if isinstance(raw_types, list):
         selected_types = set(raw_types)
@@ -363,6 +372,12 @@ def scrape_start():
         all_matches=all_matches,
         limit_per_type=limit_per_type,
         dry_run=dry_run,
+        date_filters=date_filters,
+        parallel_trusts=parallel_trusts,
+        max_pages=max_pages,
+        crawl_delay=crawl_delay,
+        ignore_cache=ignore_cache,
+        verbose=verbose,
     )
     return jsonify({"job_id": job.job_id, "status": job.status, "trust_count": job.total_trusts})
 
@@ -405,6 +420,14 @@ def scrape_cancel(job_id: str):
     if not cancelled:
         return jsonify({"error": "Job not found"}), 404
     return jsonify({"job_id": job_id, "status": "cancelled"})
+
+
+@app.route("/scrape/results/<job_id>")
+def scrape_results(job_id: str):
+    job = scraper_engine.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(job.summary_table())
 
 
 # Backward-compatible redirect: old /run-crawler button now starts all-trusts scrape
