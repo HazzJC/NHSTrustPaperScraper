@@ -1,19 +1,14 @@
-import asyncio
 import os
 import platform
 
 from crawl4ai import AsyncWebCrawler, CacheMode, CrawlerRunConfig
-from crawl4ai.content_filter_strategy import BM25ContentFilter
 from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
 from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
 from crawl4ai.deep_crawling.filters import (
-    ContentRelevanceFilter,
-    ContentTypeFilter,
     FilterChain,
     URLPatternFilter,
 )
 from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
-from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -138,7 +133,16 @@ class AdvancedCrawler:
                         "content-disposition", "No title found"
                     )
                     if filename != "No title found":
-                        filename = filename.split(";")[1].split("=")[1]
+                        parts = [
+                            part.strip()
+                            for part in filename.split(";")
+                            if "filename=" in part.lower()
+                        ]
+                        filename = (
+                            parts[0].split("=", 1)[1].strip('"')
+                            if parts
+                            else "No title found"
+                        )
                     print(
                         f"Name: {filename if filename else 'No name found'}\nUrl: {result.url}\n"
                     )

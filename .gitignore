@@ -27,6 +27,7 @@ wheels/
 # Data files
 data/
 crawler_cache/
+board_papers/
 
 # Logs
 *.log

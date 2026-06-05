@@ -6,9 +6,10 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import google.generativeai as genai
 import requests
 from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 from PyPDF2 import PdfReader
 
 from .prompt_helper import (
@@ -39,14 +40,12 @@ class PDFAnalyzer:
             raise ValueError("Gemini API key is required")
 
         # Configure Gemini
-        genai.configure(api_key=_api_key)
+        self._client = genai.Client(api_key=_api_key)
         logger.debug("PDFAnalyzer initialized")  # Downgrade to debug
 
         # Initialize models as class attributes
-        self._model = genai.GenerativeModel("gemini-2.0-flash")
-        self._date_model = genai.GenerativeModel(
-            "gemini-2.5-pro-preview-03-25"
-        )  # Used for date extraction
+        self._model_name = "gemini-2.0-flash"
+        self._date_model_name = "gemini-2.5-pro"  # Used for date extraction
 
         # Cache for downloaded PDFs
         self._download_cache: Dict[str, Dict[str, str]] = {}
@@ -111,7 +110,9 @@ class PDFAnalyzer:
                 split_point = start + chunk_size
 
             chunks.append(text[start:split_point])
-            start = split_point.lstrip()
+            start = split_point
+            while start < text_len and text[start].isspace():
+                start += 1
 
         logger.debug(f"Split into {len(chunks)} chunks")
         return chunks
@@ -225,9 +226,10 @@ class PDFAnalyzer:
         try:
             # Only use first 2000 characters for metadata extraction
             text_sample = text[:2000]
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            response = self._model.generate_content(get_metadata_prompt(text_sample))
-            content = response.text.strip()
+            content = self._generate_content(
+                get_metadata_prompt(text_sample),
+                model=self._model_name,
+            )
 
             # Extract each metadata field
             for field, marker in METADATA_FIELDS.items():
@@ -244,8 +246,11 @@ class PDFAnalyzer:
             logger.error(f"Error extracting metadata: {str(e)}")
             return metadata
 
-    def analyze_pdf_url(self, url: str) -> Dict[str, Any]:
+    def analyze_pdf_url(self, url: str, verbose: bool = False) -> Dict[str, Any]:
         """Download and analyze a PDF from a URL."""
+        if verbose:
+            logger.info(f"Analyzing PDF URL: {url}")
+
         try:
             if os.path.exists(url):
                 logger.debug(f"Analyzing local file: {url}")
@@ -275,7 +280,13 @@ class PDFAnalyzer:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
-        response = requests.get(url, headers=headers, stream=True, verify=False)
+        response = requests.get(
+            url,
+            headers=headers,
+            stream=True,
+            timeout=30,
+            verify=False,
+        )
         response.raise_for_status()
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
@@ -350,7 +361,7 @@ class PDFAnalyzer:
 
         for pdf_file in pdf_files:
             results[str(pdf_file)] = self.analyze_pdf_file(
-                str(pdf_file), verbose=verbose
+                str(pdf_file)
             )
 
         return results
@@ -435,7 +446,11 @@ class PDFAnalyzer:
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                     }
                     response = requests.get(
-                        pdf_path_or_url, headers=headers, stream=True, verify=False
+                        pdf_path_or_url,
+                        headers=headers,
+                        stream=True,
+                        timeout=30,
+                        verify=False,
                     )
                     response.raise_for_status()
 
@@ -454,12 +469,11 @@ class PDFAnalyzer:
             reader = PdfReader(pdf_path)
             text = ""
             for i in range(min(2, len(reader.pages))):
-                text += reader.pages[i].extract_text() + " "
+                text += (reader.pages[i].extract_text() or "") + " "
 
             prompt = get_date_extraction_prompt(text[:3000])
 
-            response = self._date_model.generate_content(prompt)
-            date = response.text.strip()
+            date = self._generate_content(prompt, model=self._date_model_name)
 
             logger.info(f"Extracted date: {date}")
 
@@ -530,22 +544,39 @@ class PDFAnalyzer:
         max_tokens: int = 8_192,
     ) -> str:
         """Single place to call the Gemini model."""
-        response = self._model.generate_content(
+        return self._generate_content(
             prompt,
-            generation_config={
-                "temperature": temperature,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": max_tokens,
-            },
-            safety_settings=[
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    "threshold": "BLOCK_ONLY_HIGH",
-                }
-            ],
+            model=self._model_name,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
-        return response.text.strip()
+
+    def _generate_content(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        temperature: float = 0.1,
+        max_tokens: int = 8_192,
+    ) -> str:
+        """Generate text using the supported Gemini SDK."""
+        response = self._client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=temperature,
+                topP=0.95,
+                topK=40,
+                maxOutputTokens=max_tokens,
+                safetySettings=[
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+                    )
+                ],
+            ),
+        )
+        return (response.text or "").strip()
 
 
 # CLI for standalone use

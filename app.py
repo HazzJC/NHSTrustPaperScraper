@@ -22,8 +22,17 @@ os.makedirs(DATA_DIR, exist_ok=True)
 RESULTS_FILE = os.path.join(DATA_DIR, "board_papers.json")
 results_store = ResultsStore(RESULTS_FILE)
 
-GEMINI_API_KEY: str = Config.GEMINI_API_KEY
-pdf_analyzer = PDFAnalyzer(GEMINI_API_KEY)
+GEMINI_API_KEY: str | None = Config.GEMINI_API_KEY
+pdf_analyzer: PDFAnalyzer | None = None
+
+
+def _get_pdf_analyzer() -> PDFAnalyzer:
+    global pdf_analyzer
+    if pdf_analyzer is None:
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY is required for PDF analysis.")
+        pdf_analyzer = PDFAnalyzer(GEMINI_API_KEY)
+    return pdf_analyzer
 
 
 def _apply_metadata(
@@ -81,7 +90,7 @@ def analyze_full_paper(
     analyzer: PDFAnalyzer,
 ) -> dict:
     """Do a full Gemini extraction on one paper and return cleaned results."""
-    results = analyzer.analyze_pdf_url(paper["url"], verbose=False)
+    results = analyzer.analyze_pdf_url(paper["url"])
     print(f"  - Found terms: {', '.join(results.get('terms_found', []))}")
 
     # add title, date and organisation if found in result
@@ -122,8 +131,9 @@ def update_paper_analysis(url: str, analysis: dict) -> None:
             continue
 
         # Clean + filter the raw terms_data
+        analyzer = _get_pdf_analyzer()
         terms_data = _extract_valid_term_data(
-            analysis.get("terms_data", {}), pdf_analyzer
+            analysis.get("terms_data", {}), analyzer
         )
 
         # Bulk-update the paper record
@@ -186,20 +196,23 @@ async def process_organization(
 ) -> list[dict]:
     """Crawl one NHS site and (optionally) analyse its PDFs."""
     print(f"\nProcessing organization: {url}")
+    analyzer = _get_pdf_analyzer()
     papers = await crawler.deep_crawl(url)
     org_papers = []
     for raw in papers:
         paper = create_paper_dict(raw, url, existing_papers)
+        if not paper:
+            continue
 
         # Always fetch a date first – we need it for every mode
-        date = pdf_analyzer.extract_date_only(paper["url"], keep_temp_file=True)
+        date = analyzer.extract_date_only(paper["url"], keep_temp_file=True)
         paper["date"] = date
-        if not pdf_analyzer.is_from_2024_or_later(date):
+        if not analyzer.is_from_2024_or_later(date):
             print(f"Skipping pre‑2024 paper: {date}")
             continue
 
         if not scrape_only:
-            analysis = analyze_full_paper(paper, pdf_analyzer)
+            analysis = analyze_full_paper(paper, analyzer)
             _apply_metadata(paper, analysis)
             paper.update(
                 {
@@ -288,6 +301,10 @@ def analyze_papers() -> Response:
     urls = data.get("urls", [])
     if not urls:
         return jsonify({"error": "No URLs provided", "success": False}), 400
+    try:
+        analyzer = _get_pdf_analyzer()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc), "success": False}), 503
 
     current_papers = {p["url"]: p for p in results_store.board_papers}
     results = []
@@ -303,29 +320,31 @@ def analyze_papers() -> Response:
 
             # 2) Fresh analysis: first check the date
             print(f"Checking date for: {url}")
-            date = pdf_analyzer.extract_date_only(url, keep_temp_file=True)
-            if not pdf_analyzer.is_from_2024_or_later(date):
+            date = analyzer.extract_date_only(url, keep_temp_file=True)
+            if not analyzer.is_from_2024_or_later(date):
                 print(f"Skipping pre-2024 paper: {date}")
                 continue
 
             # 3) Do the full Gemini extraction
             print(f"Analyzing {url} for healthcare terms")
             # pass minimal paper dict (url plus any existing fields)
-            analysis = analyze_full_paper({"url": url, **(paper or {})}, pdf_analyzer)
+            analysis = analyze_full_paper({"url": url, **(paper or {})}, analyzer)
 
             # 4) Update the store
             if paper:
                 update_paper_analysis(url, analysis)
+                updated = paper
             else:
                 new_paper = {"url": url, **analysis}
                 _apply_metadata(new_paper, analysis)
                 new_paper["sort_date"] = new_paper.get("date", "")
                 results_store.board_papers.append(new_paper)
+                current_papers[url] = new_paper
+                updated = new_paper
 
             results_store.update(results_store.board_papers)
 
             # 5) Collect the response
-            updated = current_papers.get(url, new_paper)
             results.append(_build_analysis_response(updated, "new"))
 
         except Exception:
@@ -349,7 +368,10 @@ def analyze_papers() -> Response:
 
 @app.route("/run-crawler", methods=["POST"])
 def run_crawler_route():
-    asyncio.run(run_crawler())
+    try:
+        run_crawler()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc), "success": False}), 503
     return jsonify(success=True)
 
 
@@ -358,11 +380,17 @@ def test_specific_urls():
     data = request.get_json()
     urls = data.get("urls", [])
     scrape_only = data.get("scrape_only", False)
-    papers = asyncio.run(run_crawler_for_specific_urls(urls, scrape_only=scrape_only))
+    try:
+        papers = asyncio.run(run_crawler_for_specific_urls(urls, scrape_only=scrape_only))
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc), "status": "error"}), 503
     return jsonify(results={"board_papers": papers}, status="success")
 
 
 if __name__ == "__main__":
     # Start Flask in production (no debug=True)
-    print(f"Using API key starting with: {GEMINI_API_KEY[:8]}...")
+    if GEMINI_API_KEY:
+        print(f"Using API key starting with: {GEMINI_API_KEY[:8]}...")
+    else:
+        print("GEMINI_API_KEY is not set; analysis routes will return 503.")
     app.run(debug=True, host="0.0.0.0", port=5002)

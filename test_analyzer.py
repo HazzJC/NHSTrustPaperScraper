@@ -1,11 +1,15 @@
 import json
+import os
 
 from utils.pdf_analyzer import PDFAnalyzer
 
 
 def main():
     # Initialize the analyzer with the API key
-    api_key = "AIzaSyCcPBK0IZdA2UdXPPF_DJ5ObtQqM30eqUo"
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Set GEMINI_API_KEY before running this analyzer smoke test.")
+
     analyzer = PDFAnalyzer(api_key)
 
     # Test URL

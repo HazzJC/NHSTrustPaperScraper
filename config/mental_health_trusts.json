@@ -1,0 +1,195 @@
+[
+  {
+    "name": "Birmingham and Solihull Mental Health NHS Foundation Trust",
+    "url": "https://www.bsmhft.nhs.uk/"
+  },
+  {
+    "name": "South West London and St George's Mental Health NHS Trust",
+    "url": "https://www.swlstg.nhs.uk/"
+  },
+  {
+    "name": "Avon and Wiltshire Mental Health Partnership NHS Trust",
+    "url": "https://www.awp.nhs.uk/"
+  },
+  {
+    "name": "Berkshire Healthcare NHS Foundation Trust",
+    "url": "https://www.berkshirehealthcare.nhs.uk/"
+  },
+  {
+    "name": "Black Country Healthcare NHS Foundation Trust",
+    "url": "https://www.blackcountryhealthcare.nhs.uk/"
+  },
+  {
+    "name": "Bradford District Care NHS Foundation Trust",
+    "url": "https://www.bdct.nhs.uk/"
+  },
+  {
+    "name": "Cambridgeshire and Peterborough NHS Foundation Trust",
+    "url": "https://www.cpft.nhs.uk/"
+  },
+  {
+    "name": "Central and North West London NHS Foundation Trust",
+    "url": "https://www.cnwl.nhs.uk/"
+  },
+  {
+    "name": "Cheshire and Wirral Partnership NHS Foundation Trust",
+    "url": "https://www.cwp.nhs.uk/"
+  },
+  {
+    "name": "Cornwall Partnership NHS Foundation Trust",
+    "url": "https://www.cornwallft.nhs.uk/"
+  },
+  {
+    "name": "Coventry and Warwickshire Partnership NHS Trust",
+    "url": "https://www.covwarkpt.nhs.uk/"
+  },
+  {
+    "name": "Cumbria, Northumberland, Tyne and Wear NHS Foundation Trust",
+    "url": "https://www.cntw.nhs.uk/"
+  },
+  {
+    "name": "Derbyshire Healthcare NHS Foundation Trust",
+    "url": "https://www.derbyshirehealthcareft.nhs.uk/"
+  },
+  {
+    "name": "Devon Partnership NHS Trust",
+    "url": "https://www.dpt.nhs.uk/"
+  },
+  {
+    "name": "Dorset Healthcare University NHS Foundation Trust",
+    "url": "https://www.dorsethealthcare.nhs.uk/"
+  },
+  {
+    "name": "East London NHS Foundation Trust",
+    "url": "https://www.elft.nhs.uk/"
+  },
+  {
+    "name": "Essex Partnership University NHS Foundation Trust",
+    "url": "https://eput.nhs.uk/",
+    "allowed_domains": [
+      "www.eput.nhs.uk"
+    ]
+  },
+  {
+    "name": "Gloucestershire Health and Care NHS Foundation Trust",
+    "url": "https://www.ghc.nhs.uk/"
+  },
+  {
+    "name": "Greater Manchester Mental Health NHS Foundation Trust",
+    "url": "https://www.gmmh.nhs.uk/"
+  },
+  {
+    "name": "Hampshire and Isle of Wight Healthcare NHS Foundation Trust",
+    "url": "https://www.hiowhealthcare.nhs.uk/",
+    "search_query": "Hampshire and Isle of Wight Healthcare NHS Foundation Trust official website"
+  },
+  {
+    "name": "Herefordshire and Worcestershire Health and Care NHS Trust",
+    "url": "https://www.hacw.nhs.uk/"
+  },
+  {
+    "name": "Hertfordshire Partnership University NHS Foundation Trust",
+    "url": "https://www.hpft.nhs.uk/"
+  },
+  {
+    "name": "Humber Teaching NHS Foundation Trust",
+    "url": "https://www.humber.nhs.uk/"
+  },
+  {
+    "name": "Kent and Medway NHS and Social Care Partnership Trust",
+    "url": "https://www.kmpt.nhs.uk/"
+  },
+  {
+    "name": "Lancashire & South Cumbria NHS Foundation Trust",
+    "url": "https://www.lscft.nhs.uk/"
+  },
+  {
+    "name": "Sheffield Health & Social Care NHS Foundation Trust",
+    "url": "https://www.shsc.nhs.uk/"
+  },
+  {
+    "name": "Leeds and York Partnership NHS Foundation Trust",
+    "url": "https://www.leedsandyorkpft.nhs.uk/"
+  },
+  {
+    "name": "Leicestershire Partnership NHS Trust",
+    "url": "https://www.leicspart.nhs.uk/"
+  },
+  {
+    "name": "Lincolnshire Partnership NHS Foundation Trust",
+    "url": "https://www.lpft.nhs.uk/"
+  },
+  {
+    "name": "Mersey Care NHS Foundation Trust",
+    "url": "https://www.merseycare.nhs.uk/"
+  },
+  {
+    "name": "Midlands Partnership NHS Foundation Trust",
+    "url": "https://www.mpft.nhs.uk/"
+  },
+  {
+    "name": "Norfolk and Suffolk NHS Foundation Trust",
+    "url": "https://www.nsft.nhs.uk/"
+  },
+  {
+    "name": "North East London NHS Foundation Trust",
+    "url": "https://www.nelft.nhs.uk/"
+  },
+  {
+    "name": "North London NHS Foundation Trust",
+    "url": "https://www.northlondonmentalhealth.nhs.uk/",
+    "search_query": "North London NHS Foundation Trust official website"
+  },
+  {
+    "name": "North Staffordshire Combined Healthcare NHS Trust",
+    "url": "https://www.combined.nhs.uk/"
+  },
+  {
+    "name": "Northamptonshire Healthcare NHS Foundation Trust",
+    "url": "https://www.nhft.nhs.uk/"
+  },
+  {
+    "name": "Nottinghamshire Healthcare NHS Foundation Trust",
+    "url": "https://www.nottinghamshirehealthcare.nhs.uk/"
+  },
+  {
+    "name": "Oxford Health NHS Foundation Trust",
+    "url": "https://www.oxfordhealth.nhs.uk/"
+  },
+  {
+    "name": "Oxleas NHS Foundation Trust",
+    "url": "https://www.oxleas.nhs.uk/"
+  },
+  {
+    "name": "Pennine Care NHS Foundation Trust",
+    "url": "https://www.penninecare.nhs.uk/"
+  },
+  {
+    "name": "Rotherham Doncaster and South Humber NHS Foundation Trust",
+    "url": "https://www.rdash.nhs.uk/"
+  },
+  {
+    "name": "South London and Maudsley NHS Foundation Trust",
+    "url": "https://www.slam.nhs.uk/"
+  },
+  {
+    "name": "South West Yorkshire Partnership NHS Foundation Trust",
+    "url": "https://www.southwestyorkshire.nhs.uk/"
+  },
+  {
+    "name": "Surrey and Borders Partnership NHS Foundation Trust",
+    "url": "https://www.sabp.nhs.uk/"
+  },
+  {
+    "name": "Sussex Partnership NHS Foundation Trust",
+    "url": "https://www.sussexpartnership.nhs.uk/"
+  },
+  {
+    "name": "Tees, Esk and Wear Valleys NHS Foundation Trust",
+    "url": "https://www.tewv.nhs.uk/"
+  },
+  {
+    "name": "West London NHS Trust",
+    "url": "https://www.westlondon.nhs.uk/"
+  }
+]
