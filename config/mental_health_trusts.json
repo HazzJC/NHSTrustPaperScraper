@@ -1,195 +1,336 @@
 [
   {
     "name": "Birmingham and Solihull Mental Health NHS Foundation Trust",
-    "url": "https://www.bsmhft.nhs.uk/"
+    "url": "https://www.bsmhft.nhs.uk/",
+    "start_urls": [
+      "https://www.bsmhft.nhs.uk/about-us/trust-board/"
+    ]
   },
   {
     "name": "South West London and St George's Mental Health NHS Trust",
-    "url": "https://www.swlstg.nhs.uk/"
+    "url": "https://www.swlstg.nhs.uk/",
+    "start_urls": [
+      "https://www.swlstg.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Avon and Wiltshire Mental Health Partnership NHS Trust",
-    "url": "https://www.awp.nhs.uk/"
+    "url": "https://www.awp.nhs.uk/",
+    "start_urls": [
+      "https://www.awp.nhs.uk/about-us/trust-board/board-meetings/"
+    ]
   },
   {
     "name": "Berkshire Healthcare NHS Foundation Trust",
-    "url": "https://www.berkshirehealthcare.nhs.uk/"
+    "url": "https://www.berkshirehealthcare.nhs.uk/",
+    "start_urls": [
+      "https://www.berkshirehealthcare.nhs.uk/about-us/board-of-directors/board-papers/"
+    ]
   },
   {
     "name": "Black Country Healthcare NHS Foundation Trust",
-    "url": "https://www.blackcountryhealthcare.nhs.uk/"
+    "url": "https://www.blackcountryhealthcare.nhs.uk/",
+    "start_urls": [
+      "https://www.blackcountryhealthcare.nhs.uk/about-us/board-papers/"
+    ]
   },
   {
     "name": "Bradford District Care NHS Foundation Trust",
-    "url": "https://www.bdct.nhs.uk/"
+    "url": "https://www.bdct.nhs.uk/",
+    "start_urls": [
+      "https://www.bdct.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Cambridgeshire and Peterborough NHS Foundation Trust",
-    "url": "https://www.cpft.nhs.uk/"
+    "url": "https://www.cpft.nhs.uk/",
+    "start_urls": [
+      "https://www.cpft.nhs.uk/about-us/board-of-directors/board-papers/"
+    ]
   },
   {
     "name": "Central and North West London NHS Foundation Trust",
-    "url": "https://www.cnwl.nhs.uk/"
+    "url": "https://www.cnwl.nhs.uk/",
+    "start_urls": [
+      "https://www.cnwl.nhs.uk/about/trust-board/board-meetings-and-papers/"
+    ]
   },
   {
     "name": "Cheshire and Wirral Partnership NHS Foundation Trust",
-    "url": "https://www.cwp.nhs.uk/"
+    "url": "https://www.cwp.nhs.uk/",
+    "start_urls": [
+      "https://www.cwp.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Cornwall Partnership NHS Foundation Trust",
-    "url": "https://www.cornwallft.nhs.uk/"
+    "url": "https://www.cornwallft.nhs.uk/",
+    "start_urls": [
+      "https://www.cornwallft.nhs.uk/about-us/trust-board/"
+    ]
   },
   {
     "name": "Coventry and Warwickshire Partnership NHS Trust",
-    "url": "https://www.covwarkpt.nhs.uk/"
+    "url": "https://www.covwarkpt.nhs.uk/",
+    "start_urls": [
+      "https://www.covwarkpt.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Cumbria, Northumberland, Tyne and Wear NHS Foundation Trust",
-    "url": "https://www.cntw.nhs.uk/"
+    "url": "https://www.cntw.nhs.uk/",
+    "start_urls": [
+      "https://www.cntw.nhs.uk/about-us/trust-board/board-meetings/"
+    ]
   },
   {
     "name": "Derbyshire Healthcare NHS Foundation Trust",
-    "url": "https://www.derbyshirehealthcareft.nhs.uk/"
+    "url": "https://www.derbyshirehealthcareft.nhs.uk/",
+    "start_urls": [
+      "https://www.derbyshirehealthcareft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Devon Partnership NHS Trust",
-    "url": "https://www.dpt.nhs.uk/"
+    "url": "https://www.dpt.nhs.uk/",
+    "start_urls": [
+      "https://www.dpt.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Dorset Healthcare University NHS Foundation Trust",
-    "url": "https://www.dorsethealthcare.nhs.uk/"
+    "url": "https://www.dorsethealthcare.nhs.uk/",
+    "start_urls": [
+      "https://www.dorsethealthcare.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "East London NHS Foundation Trust",
-    "url": "https://www.elft.nhs.uk/"
+    "url": "https://www.elft.nhs.uk/",
+    "start_urls": [
+      "https://www.elft.nhs.uk/about/trust-board/board-papers"
+    ]
   },
   {
     "name": "Essex Partnership University NHS Foundation Trust",
     "url": "https://eput.nhs.uk/",
     "allowed_domains": [
       "www.eput.nhs.uk"
+    ],
+    "start_urls": [
+      "https://www.eput.nhs.uk/about-us/trust-board/board-meetings/"
     ]
   },
   {
     "name": "Gloucestershire Health and Care NHS Foundation Trust",
-    "url": "https://www.ghc.nhs.uk/"
+    "url": "https://www.ghc.nhs.uk/",
+    "start_urls": [
+      "https://www.ghc.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Greater Manchester Mental Health NHS Foundation Trust",
-    "url": "https://www.gmmh.nhs.uk/"
+    "url": "https://www.gmmh.nhs.uk/",
+    "start_urls": [
+      "https://www.gmmh.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Hampshire and Isle of Wight Healthcare NHS Foundation Trust",
     "url": "https://www.hiowhealthcare.nhs.uk/",
-    "search_query": "Hampshire and Isle of Wight Healthcare NHS Foundation Trust official website"
+    "search_query": "Hampshire and Isle of Wight Healthcare NHS Foundation Trust board papers",
+    "start_urls": [
+      "https://www.hiowhealthcare.nhs.uk/about-us/trust-board/"
+    ]
   },
   {
     "name": "Herefordshire and Worcestershire Health and Care NHS Trust",
-    "url": "https://www.hacw.nhs.uk/"
+    "url": "https://www.hacw.nhs.uk/",
+    "start_urls": [
+      "https://www.hacw.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Hertfordshire Partnership University NHS Foundation Trust",
-    "url": "https://www.hpft.nhs.uk/"
+    "url": "https://www.hpft.nhs.uk/",
+    "start_urls": [
+      "https://www.hpft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Humber Teaching NHS Foundation Trust",
-    "url": "https://www.humber.nhs.uk/"
+    "url": "https://www.humber.nhs.uk/",
+    "start_urls": [
+      "https://www.humber.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Kent and Medway NHS and Social Care Partnership Trust",
-    "url": "https://www.kmpt.nhs.uk/"
+    "url": "https://www.kmpt.nhs.uk/",
+    "start_urls": [
+      "https://www.kmpt.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Lancashire & South Cumbria NHS Foundation Trust",
-    "url": "https://www.lscft.nhs.uk/"
+    "url": "https://www.lscft.nhs.uk/",
+    "start_urls": [
+      "https://www.lscft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Sheffield Health & Social Care NHS Foundation Trust",
-    "url": "https://www.shsc.nhs.uk/"
+    "url": "https://www.shsc.nhs.uk/",
+    "start_urls": [
+      "https://www.shsc.nhs.uk/about-us/board-of-directors/board-papers/"
+    ]
   },
   {
     "name": "Leeds and York Partnership NHS Foundation Trust",
-    "url": "https://www.leedsandyorkpft.nhs.uk/"
+    "url": "https://www.leedsandyorkpft.nhs.uk/",
+    "start_urls": [
+      "https://www.leedsandyorkpft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Leicestershire Partnership NHS Trust",
-    "url": "https://www.leicspart.nhs.uk/"
+    "url": "https://www.leicspart.nhs.uk/",
+    "start_urls": [
+      "https://www.leicspart.nhs.uk/about-us/trust-board/board-meetings/"
+    ]
   },
   {
     "name": "Lincolnshire Partnership NHS Foundation Trust",
-    "url": "https://www.lpft.nhs.uk/"
+    "url": "https://www.lpft.nhs.uk/",
+    "start_urls": [
+      "https://www.lpft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Mersey Care NHS Foundation Trust",
-    "url": "https://www.merseycare.nhs.uk/"
+    "url": "https://www.merseycare.nhs.uk/",
+    "start_urls": [
+      "https://www.merseycare.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Midlands Partnership NHS Foundation Trust",
-    "url": "https://www.mpft.nhs.uk/"
+    "url": "https://www.mpft.nhs.uk/",
+    "start_urls": [
+      "https://www.mpft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Norfolk and Suffolk NHS Foundation Trust",
-    "url": "https://www.nsft.nhs.uk/"
+    "url": "https://www.nsft.nhs.uk/",
+    "start_urls": [
+      "https://www.nsft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "North East London NHS Foundation Trust",
-    "url": "https://www.nelft.nhs.uk/"
+    "url": "https://www.nelft.nhs.uk/",
+    "start_urls": [
+      "https://www.nelft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "North London NHS Foundation Trust",
     "url": "https://www.northlondonmentalhealth.nhs.uk/",
-    "search_query": "North London NHS Foundation Trust official website"
+    "search_query": "North London NHS Foundation Trust board papers",
+    "start_urls": [
+      "https://www.northlondonmentalhealth.nhs.uk/about-us/trust-board/"
+    ]
   },
   {
     "name": "North Staffordshire Combined Healthcare NHS Trust",
-    "url": "https://www.combined.nhs.uk/"
+    "url": "https://www.combined.nhs.uk/",
+    "start_urls": [
+      "https://www.combined.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Northamptonshire Healthcare NHS Foundation Trust",
-    "url": "https://www.nhft.nhs.uk/"
+    "url": "https://www.nhft.nhs.uk/",
+    "start_urls": [
+      "https://www.nhft.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Nottinghamshire Healthcare NHS Foundation Trust",
-    "url": "https://www.nottinghamshirehealthcare.nhs.uk/"
+    "url": "https://www.nottinghamshirehealthcare.nhs.uk/",
+    "start_urls": [
+      "https://www.nottinghamshirehealthcare.nhs.uk/about-us/board-of-directors/board-papers/"
+    ]
   },
   {
     "name": "Oxford Health NHS Foundation Trust",
-    "url": "https://www.oxfordhealth.nhs.uk/"
+    "url": "https://www.oxfordhealth.nhs.uk/",
+    "start_urls": [
+      "https://www.oxfordhealth.nhs.uk/about-us/governance/board-papers/"
+    ]
   },
   {
     "name": "Oxleas NHS Foundation Trust",
-    "url": "https://www.oxleas.nhs.uk/"
+    "url": "https://www.oxleas.nhs.uk/",
+    "start_urls": [
+      "https://www.oxleas.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Pennine Care NHS Foundation Trust",
-    "url": "https://www.penninecare.nhs.uk/"
+    "url": "https://www.penninecare.nhs.uk/",
+    "start_urls": [
+      "https://www.penninecare.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Rotherham Doncaster and South Humber NHS Foundation Trust",
-    "url": "https://www.rdash.nhs.uk/"
+    "url": "https://www.rdash.nhs.uk/",
+    "start_urls": [
+      "https://www.rdash.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "South London and Maudsley NHS Foundation Trust",
-    "url": "https://www.slam.nhs.uk/"
+    "url": "https://www.slam.nhs.uk/",
+    "start_urls": [
+      "https://www.slam.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "South West Yorkshire Partnership NHS Foundation Trust",
-    "url": "https://www.southwestyorkshire.nhs.uk/"
+    "url": "https://www.southwestyorkshire.nhs.uk/",
+    "start_urls": [
+      "https://www.southwestyorkshire.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Surrey and Borders Partnership NHS Foundation Trust",
-    "url": "https://www.sabp.nhs.uk/"
+    "url": "https://www.sabp.nhs.uk/",
+    "start_urls": [
+      "https://www.sabp.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Sussex Partnership NHS Foundation Trust",
-    "url": "https://www.sussexpartnership.nhs.uk/"
+    "url": "https://www.sussexpartnership.nhs.uk/",
+    "start_urls": [
+      "https://www.sussexpartnership.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "Tees, Esk and Wear Valleys NHS Foundation Trust",
-    "url": "https://www.tewv.nhs.uk/"
+    "url": "https://www.tewv.nhs.uk/",
+    "start_urls": [
+      "https://www.tewv.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   },
   {
     "name": "West London NHS Trust",
-    "url": "https://www.westlondon.nhs.uk/"
+    "url": "https://www.westlondon.nhs.uk/",
+    "start_urls": [
+      "https://www.westlondon.nhs.uk/about-us/trust-board/board-papers/"
+    ]
   }
 ]

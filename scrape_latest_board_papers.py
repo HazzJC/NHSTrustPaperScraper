@@ -6,11 +6,12 @@ import email.utils
 import json
 import re
 import sys
+import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import quote_plus, unquote, urljoin, urlparse
+from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 
 import requests
 import urllib3
@@ -38,10 +39,18 @@ COMMON_PATHS = (
     "/about-us/board/",
     "/about-us/publications/",
     "/about-us/governance/",
+    "/about-us/accountability/",
     "/board-papers/",
+    "/board-papers-and-minutes/",
     "/board-meetings/",
     "/trust-board/",
+    "/our-trust/board-of-directors/",
     "/our-board/",
+    "/corporate-governance/",
+    "/key-information/board-papers/",
+    "/about/board/",
+    "/transparency/",
+    "/get-involved/board/",
     "/meetings/",
     "/publications/",
     "/governance/",
@@ -365,8 +374,10 @@ def extract_date(text: str) -> tuple[dt.date | None, str]:
 
 
 def request_page(
-    session: requests.Session, url: str, timeout: int
+    session: requests.Session, url: str, timeout: int, crawl_delay: float = 0.0
 ) -> tuple[str, str] | None:
+    if crawl_delay:
+        time.sleep(crawl_delay)
     try:
         response = session.get(url, timeout=timeout)
         response.raise_for_status()
@@ -403,13 +414,53 @@ def discover_official_site(
     html, _ = result
     for url, text in iter_links(html, search_url):
         parsed = urlparse(url)
+        # DuckDuckGo wraps results through its own redirect — extract the real URL
         if "duckduckgo.com" in parsed.netloc:
-            continue
-        if ".nhs.uk" in parsed.netloc.lower() and "official" in text.lower():
-            return f"{parsed.scheme}://{parsed.netloc}/"
+            uddg = parse_qs(parsed.query).get("uddg", [None])[0]
+            if uddg:
+                parsed = urlparse(uddg)
+            else:
+                continue
         if ".nhs.uk" in parsed.netloc.lower():
             return f"{parsed.scheme}://{parsed.netloc}/"
     return None
+
+
+def _parse_sitemap_locs(
+    session: requests.Session,
+    sitemap_url: str,
+    *,
+    timeout: int,
+    selected_types: set[str],
+    candidates: list[tuple[int, str]],
+    depth: int = 0,
+) -> None:
+    try:
+        response = session.get(sitemap_url, timeout=timeout)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+    except (requests.RequestException, ET.ParseError):
+        return
+
+    is_index = root.tag.endswith("sitemapindex")
+    sub_sitemap_urls: list[str] = []
+
+    for loc in root.iter():
+        if not loc.tag.endswith("loc") or not loc.text:
+            continue
+        url = loc.text.strip()
+        if is_index and depth == 0:
+            sub_sitemap_urls.append(url)
+        else:
+            score = page_relevance_score(url, selected_types)
+            if score:
+                candidates.append((score, url))
+
+    for sub_url in sub_sitemap_urls[:3]:
+        _parse_sitemap_locs(
+            session, sub_url, timeout=timeout,
+            selected_types=selected_types, candidates=candidates, depth=depth + 1,
+        )
 
 
 def sitemap_urls(
@@ -422,26 +473,13 @@ def sitemap_urls(
 ) -> list[str]:
     candidates: list[tuple[int, str]] = []
     for sitemap_path in ("/sitemap.xml", "/sitemap_index.xml"):
-        sitemap_url = urljoin(base_url, sitemap_path)
-        try:
-            response = session.get(sitemap_url, timeout=timeout)
-            response.raise_for_status()
-        except requests.RequestException:
-            continue
-
-        try:
-            root = ET.fromstring(response.content)
-        except ET.ParseError:
-            continue
-
-        for loc in root.iter():
-            if not loc.tag.endswith("loc") or not loc.text:
-                continue
-            url = loc.text.strip()
-            score = page_relevance_score(url, selected_types)
-            if score:
-                candidates.append((score, url))
-
+        _parse_sitemap_locs(
+            session,
+            urljoin(base_url, sitemap_path),
+            timeout=timeout,
+            selected_types=selected_types,
+            candidates=candidates,
+        )
     candidates.sort(reverse=True)
     return [url for _, url in candidates[:limit]]
 
@@ -472,10 +510,12 @@ def add_queue_url(
     *,
     score: int,
     seen_pages: set[str],
+    queued_urls: set[str],
 ) -> None:
-    if score <= 0 or url in seen_pages or any(existing == url for _, existing in queue):
+    if score <= 0 or url in seen_pages or url in queued_urls:
         return
     queue.append((score, url))
+    queued_urls.add(url)
     queue.sort(reverse=True)
 
 
@@ -485,6 +525,7 @@ def discover_candidates(
     *,
     max_pages: int,
     timeout: int,
+    crawl_delay: float,
     selected_types: set[str],
 ) -> list[Candidate]:
     trust_url = trust.url or discover_official_site(session, trust, timeout)
@@ -508,6 +549,7 @@ def discover_candidates(
     queue.sort(reverse=True)
 
     seen_pages: set[str] = set()
+    queued_urls: set[str] = {url for _, url in queue}
     seen_candidates: set[str] = set()
     candidates: list[Candidate] = []
 
@@ -521,7 +563,7 @@ def discover_candidates(
         seen_pages.add(page_url)
         print(f"  Scanning {page_url}")
 
-        result = request_page(session, page_url, timeout)
+        result = request_page(session, page_url, timeout, crawl_delay)
         if not result:
             continue
 
@@ -554,7 +596,7 @@ def discover_candidates(
                         date_source=date_source,
                         report_type=report_type,
                         title=title,
-                            extension=document_extension(link_url),
+                        extension=document_extension(link_url),
                         score=candidate_score(
                             url=link_url,
                             text=combined_text,
@@ -571,6 +613,7 @@ def discover_candidates(
                     link_url,
                     score=page_relevance_score(combined_text, selected_types),
                     seen_pages=seen_pages,
+                    queued_urls=queued_urls,
                 )
 
     return candidates
@@ -662,7 +705,7 @@ def output_path_for(
 
     title = safe_filename(candidate.title or Path(original_name).stem, max_length=80)
     filename = safe_filename(
-        f"{date_part} - {trust.name} - {candidate.report_type} - {title}",
+        f"{date_part} - {trust_slug} - {candidate.report_type} - {title}",
         max_length=170,
     )
     return output_dir / trust_slug / report_folder / year_part / f"{filename}{extension}"
@@ -832,6 +875,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Verify SSL certificates. By default SSL verification is disabled because some NHS sites have incomplete certificate chains.",
     )
+    parser.add_argument(
+        "--crawl-delay",
+        default=0.5,
+        type=float,
+        help="Seconds to wait between page requests (default: 0.5). Increase if sites return 429 errors.",
+    )
     return parser.parse_args()
 
 
@@ -875,6 +924,7 @@ def main() -> int:
                 trust,
                 max_pages=args.max_pages,
                 timeout=args.timeout,
+                crawl_delay=args.crawl_delay,
                 selected_types=selected_types,
             )
             apply_last_modified_dates(session, candidates, timeout=args.timeout)

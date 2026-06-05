@@ -10,7 +10,7 @@ import requests
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 from .prompt_helper import (
     get_analysis_prompt,
