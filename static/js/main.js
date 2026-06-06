@@ -573,8 +573,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let html = `<td>${row.trust}</td>`;
             TYPE_KEYS.forEach(key => {
                 const val = row[key];
-                if (val) {
-                    html += `<td class="text-success fw-semibold">${val}</td>`;
+                if (val && val.length) {
+                    html += `<td class="text-success fw-semibold">${val.join('<br>')}</td>`;
                 } else {
                     html += `<td class="text-muted">—</td>`;
                 }
@@ -589,7 +589,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const header = ['Trust', ...TYPE_KEYS.map(k => TYPE_LABELS[k])];
         const lines = [header.map(h => `"${h}"`).join(',')];
         resultsData.forEach(row => {
-            const cells = [row.trust, ...TYPE_KEYS.map(k => row[k] || '—')];
+            const cells = [row.trust, ...TYPE_KEYS.map(k => {
+                const v = row[k];
+                return Array.isArray(v) ? v.join('; ') : (v || '—');
+            })];
             lines.push(cells.map(c => `"${c}"`).join(','));
         });
         const csv = lines.join('\r\n');

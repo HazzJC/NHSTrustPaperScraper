@@ -112,7 +112,9 @@ class ScrapeJob:
             if trust not in rows:
                 rows[trust] = {"trust": trust, **{k: None for k in REPORT_TYPES}}
             if rtype in REPORT_TYPES and date:
-                rows[trust][rtype] = date
+                if rows[trust][rtype] is None:
+                    rows[trust][rtype] = []
+                rows[trust][rtype].append(date)
         return sorted(rows.values(), key=lambda x: x["trust"])
 
     def to_status_dict(self) -> dict:
