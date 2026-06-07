@@ -1,18 +1,21 @@
 # NHS Evidence Scraper & Sales Intelligence Platform
 
-Scrapes documents from all 47 NHS Mental Health Trusts, 42 ICBs/Commissioners, and 8 national NHS datasets. Downloads PDFs and spreadsheets, then uses AI to extract sales opportunities, procurement signals, and trust intelligence profiles.
+Scrapes documents from all 47 NHS Mental Health Trusts, 42 ICBs/Commissioners, and 8 national NHS datasets. 
+Downloads PDFs and allows for manual corrections of broken links. Future planning to allow AI summarising of data. 
 
 ---
 
 ## Quick Start
 
-### 1. Install dependencies
+### 0. Download ZIP and extract into folder of your choice. 
+
+### 1. Install dependencies: Open Powershell, change directory to the folder.
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 2. Set your Gemini API key (optional)
+### 2. OPTIONAL - CURRENTLY UNTESTED AND NEEDS FURTHER WORK - Set your Gemini API key 
 
 Create a `.env` file:
 
@@ -27,7 +30,7 @@ GEMINI_API_KEY=your-gemini-api-key-here
 SECRET_KEY=any-random-string
 ```
 
-> The key is required for Sales Intelligence features (AI extraction, NL search, pitch generation). Scraping and downloading works without it.
+> The key is required for Sales Pipeline features (AI extraction, NL search, pitch generation). Scraping and downloading works without it.
 
 ### 3. Start the dashboard
 
@@ -50,10 +53,10 @@ Open **http://localhost:5002**.
 | Download summary CSV after each run | Results section → **Download Summary (CSV)** |
 | View which orgs consistently fail | Dashboard → **Failure Log** |
 | Manually add or fix website URLs | Dashboard → **Organisation Editor** |
-| Extract AI sales intelligence from PDFs | **Sales Intelligence** tab |
-| Ask natural language questions | Intelligence → **Ask a Question** |
-| Find trusts that match your product | Intelligence → **Supplier Matching** |
-| Generate outreach emails | Intelligence → **Generate Pitch & Email** |
+UNTESTED | Extract AI sales intelligence from PDFs | **Sales Intelligence** tab | 
+UNTESTED | Ask natural language questions | Intelligence → **Ask a Question** |  
+UNTESTED | Find trusts that match your product | Intelligence → **Supplier Matching** | 
+UNTESTED | Generate outreach emails | Intelligence → **Generate Pitch & Email** | 
 
 ---
 
@@ -109,7 +112,7 @@ Open **http://localhost:5002**.
 
 National dataset files are saved to `downloads/national/<source>/` and skipped on re-runs if already present.
 
-### Where files are saved
+### Where files are saved - downloads to the /downloads folder of the unzipped folder. 
 
 ```
 downloads/
@@ -125,7 +128,7 @@ downloads/
     ...
 ```
 
-Each scraped file gets a `.metadata.json` sidecar with the source URL, date, report type, and scoring details.
+Each scraped file gets a `.metadata.json` sidecar with the source URL, date, report type, and scoring details (scoring details to be improved)
 
 ### Rate limiting
 
@@ -340,4 +343,9 @@ Add it to your `.env` file. Plain scraping works without the key.
 
 ### Slow scraping
 
-Default 0.5s delay is intentional. A full 47-trust run takes 30–90 minutes. Run fewer trusts or increase parallel workers to speed up, or increase the delay if getting rate-limited.
+Default 0.5s delay is intentional but sometimes hits rate limiting. The service can scrape multiple trusts at once to try and expediate this, but a full run can still take 10-15 minutes. If hitting errors, increase the delay to 1 second. Subsequent runs cache successful locations so will be quicker. 
+
+### TO DO ###
+- Improve file naming and structure
+- Enhance / Implement better scoring for files and keyword searches
+- Add analytics or provide companion app with analytical platform for lead generation 
