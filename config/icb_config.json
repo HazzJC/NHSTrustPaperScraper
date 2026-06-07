@@ -1,0 +1,343 @@
+[
+  {
+    "name": "NHS Bath and North East Somerset, Swindon and Wiltshire ICB",
+    "url": "https://bsw.icb.nhs.uk/",
+    "start_urls": [
+      "https://bsw.icb.nhs.uk/documents-and-reports/",
+      "https://bsw.icb.nhs.uk/about-us/bsw-implementation-plan/"
+    ]
+  },
+  {
+    "name": "NHS Bedfordshire, Luton and Milton Keynes ICB",
+    "url": "https://bedfordshirelutonandmiltonkeynes.icb.nhs.uk/",
+    "start_urls": [
+      "https://bedfordshirelutonandmiltonkeynes.icb.nhs.uk/our-publications/",
+      "https://bedfordshirelutonandmiltonkeynes.icb.nhs.uk/our-publications/strategies/"
+    ]
+  },
+  {
+    "name": "NHS Birmingham and Solihull ICB",
+    "url": "https://www.birminghamsolihull.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.birminghamsolihull.icb.nhs.uk/about-us/publications",
+      "https://www.birminghamsolihull.icb.nhs.uk/about-us/our-committees/integrated-care-board/integrated-care-board-papers"
+    ]
+  },
+  {
+    "name": "NHS Black Country ICB",
+    "url": "https://blackcountry.icb.nhs.uk/",
+    "start_urls": [
+      "https://blackcountry.icb.nhs.uk/about-us/our-priorities",
+      "https://blackcountry.icb.nhs.uk/about-us/our-priorities/our-5-year-joint-forward-plan"
+    ]
+  },
+  {
+    "name": "NHS Bristol, North Somerset and South Gloucestershire ICB",
+    "url": "https://bnssg.icb.nhs.uk/",
+    "allowed_domains": ["bnssg.icb.nhs.uk", "bnssghealthiertogether.org.uk"],
+    "start_urls": [
+      "https://bnssghealthiertogether.org.uk/about-us/our-strategy/joint-forward-plan/",
+      "https://bnssg.icb.nhs.uk/about-us/"
+    ]
+  },
+  {
+    "name": "NHS Buckinghamshire, Oxfordshire and Berkshire West ICB",
+    "url": "https://www.bucksoxonberksw.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.bucksoxonberksw.icb.nhs.uk/our-strategies-and-plans/joint-forward-plan/",
+      "https://www.bucksoxonberksw.icb.nhs.uk/about-us/"
+    ]
+  },
+  {
+    "name": "NHS Cambridgeshire and Peterborough ICB",
+    "url": "https://www.cpics.org.uk/",
+    "start_urls": [
+      "https://www.cpics.org.uk/joint-forward-plan/",
+      "https://www.cpics.org.uk/nhs-cambridgeshire-peterborough/"
+    ]
+  },
+  {
+    "name": "NHS Cheshire and Merseyside ICB",
+    "url": "https://www.cheshireandmerseyside.nhs.uk/",
+    "start_urls": [
+      "https://www.cheshireandmerseyside.nhs.uk/latest/publications/",
+      "https://www.cheshireandmerseyside.nhs.uk/latest/publications/plans-and-strategies/cheshire-and-merseyside-joint-forward-plan/"
+    ]
+  },
+  {
+    "name": "NHS Cornwall and the Isles of Scilly ICB",
+    "url": "https://cios.icb.nhs.uk/",
+    "start_urls": [
+      "https://cios.icb.nhs.uk/ics/",
+      "https://cios.icb.nhs.uk/get-involved/shaping-our-integrated-care-strategy/"
+    ]
+  },
+  {
+    "name": "NHS Coventry and Warwickshire ICB",
+    "url": "https://www.happyhealthylives.uk/",
+    "start_urls": [
+      "https://www.happyhealthylives.uk/integrated-care-board/about-us/our-strategies-and-publications/",
+      "https://www.happyhealthylives.uk/our-system/ihcdp/"
+    ]
+  },
+  {
+    "name": "NHS Derby and Derbyshire ICB",
+    "url": "https://joinedupcarederbyshire.co.uk/",
+    "start_urls": [
+      "https://joinedupcarederbyshire.co.uk/derbyshire-integrated-care-board/our-nhs-plan/",
+      "https://joinedupcarederbyshire.co.uk/publications/annual-reports/"
+    ]
+  },
+  {
+    "name": "NHS Devon ICB",
+    "url": "https://onedevon.org.uk/",
+    "start_urls": [
+      "https://onedevon.org.uk/about-us/our-vision-and-ambitions/our-devon-plan/",
+      "https://onedevon.org.uk/about-us/our-vision-and-ambitions/our-devon-plan/our-health-and-care-strategy/"
+    ]
+  },
+  {
+    "name": "NHS Dorset ICB",
+    "url": "https://nhsdorset.nhs.uk/",
+    "start_urls": [
+      "https://nhsdorset.nhs.uk/voice/jointforwardplan/",
+      "https://nhsdorset.nhs.uk/about-us/"
+    ]
+  },
+  {
+    "name": "NHS Frimley ICB",
+    "url": "https://frimley.icb.nhs.uk/",
+    "start_urls": [
+      "https://frimley.icb.nhs.uk/about-us/nhs-frimley",
+      "https://frimley.icb.nhs.uk/policies-and-documents/"
+    ]
+  },
+  {
+    "name": "NHS Gloucestershire ICB",
+    "url": "https://www.nhsglos.nhs.uk/",
+    "start_urls": [
+      "https://www.nhsglos.nhs.uk/about-us/who-we-are-and-what-we-do/publications/",
+      "https://www.nhsglos.nhs.uk/about-us/who-we-are-and-what-we-do/publications/joint-forward-plan/"
+    ]
+  },
+  {
+    "name": "NHS Greater Manchester ICB",
+    "url": "https://gmintegratedcare.org.uk/",
+    "start_urls": [
+      "https://gmintegratedcare.org.uk/greatermanchester-icp/icp-strategy/joint-forward-plan/",
+      "https://gmintegratedcare.org.uk/nhs-gm/nhs-greater-manchester-reports/"
+    ]
+  },
+  {
+    "name": "NHS Hampshire and Isle of Wight ICB",
+    "url": "https://www.hantsiow.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.hantsiow.icb.nhs.uk/icb/publications-and-documents",
+      "https://www.hantsiow.icb.nhs.uk/icb/publications-and-documents/reports-strategies-and-plans"
+    ]
+  },
+  {
+    "name": "NHS Herefordshire and Worcestershire ICB",
+    "url": "https://herefordshireandworcestershire.icb.nhs.uk/",
+    "allowed_domains": ["herefordshireandworcestershire.icb.nhs.uk", "www.hwics.org.uk"],
+    "start_urls": [
+      "https://herefordshireandworcestershire.icb.nhs.uk/documents",
+      "https://www.hwics.org.uk/priorities/nhs-joint-forward-plan"
+    ]
+  },
+  {
+    "name": "NHS Hertfordshire and West Essex ICB",
+    "url": "https://www.hertsandwestessex.ics.nhs.uk/",
+    "start_urls": [
+      "https://www.hertsandwestessex.ics.nhs.uk/documents/",
+      "https://www.hertsandwestessex.ics.nhs.uk/about/icb/information/foi/publication-scheme/"
+    ]
+  },
+  {
+    "name": "NHS Humber and North Yorkshire ICB",
+    "url": "https://humberandnorthyorkshire.icb.nhs.uk/",
+    "start_urls": [
+      "https://humberandnorthyorkshire.icb.nhs.uk/documents-and-publications/publications/",
+      "https://humberandnorthyorkshire.icb.nhs.uk/documents-and-publications/"
+    ]
+  },
+  {
+    "name": "NHS Kent and Medway ICB",
+    "url": "https://www.kentandmedway.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.kentandmedway.icb.nhs.uk/about-us/strategies-policies-and-frameworks",
+      "https://www.kentandmedway.icb.nhs.uk/about-us/our-plans-and-priorities"
+    ]
+  },
+  {
+    "name": "NHS Lancashire and South Cumbria ICB",
+    "url": "https://www.lancashireandsouthcumbria.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.lancashireandsouthcumbria.icb.nhs.uk/about-us/publications/strategies-and-plans",
+      "https://www.lancashireandsouthcumbria.icb.nhs.uk/our-work/forward-plan"
+    ]
+  },
+  {
+    "name": "NHS Leicester, Leicestershire and Rutland ICB",
+    "url": "https://leicesterleicestershireandrutland.icb.nhs.uk/",
+    "start_urls": [
+      "https://leicesterleicestershireandrutland.icb.nhs.uk/publications/",
+      "https://leicesterleicestershireandrutland.icb.nhs.uk/about-us/"
+    ]
+  },
+  {
+    "name": "NHS Lincolnshire ICB",
+    "url": "https://lincolnshire.icb.nhs.uk/",
+    "start_urls": [
+      "https://lincolnshire.icb.nhs.uk/documents/strategies-and-plans/",
+      "https://lincolnshire.icb.nhs.uk/documents/"
+    ]
+  },
+  {
+    "name": "NHS Mid and South Essex ICB",
+    "url": "https://www.midandsouthessex.ics.nhs.uk/",
+    "start_urls": [
+      "https://www.midandsouthessex.ics.nhs.uk/publications/",
+      "https://www.midandsouthessex.ics.nhs.uk/publications/joint-forward-plan/"
+    ]
+  },
+  {
+    "name": "NHS Norfolk and Waveney ICB",
+    "url": "https://improvinglivesnw.org.uk/",
+    "start_urls": [
+      "https://improvinglivesnw.org.uk/about-us/our-nhs-integrated-care-board-icb/icb-publications/",
+      "https://improvinglivesnw.org.uk/about-us/our-nhs-integrated-care-board-icb/"
+    ]
+  },
+  {
+    "name": "NHS North Central London ICB",
+    "url": "https://nclhealthandcare.org.uk/",
+    "start_urls": [
+      "https://nclhealthandcare.org.uk/ics/our-plans/",
+      "https://nclhealthandcare.org.uk/icb/about/"
+    ]
+  },
+  {
+    "name": "NHS North East and North Cumbria ICB",
+    "url": "https://northeastnorthcumbria.nhs.uk/",
+    "start_urls": [
+      "https://northeastnorthcumbria.nhs.uk/about-us/publications-scheme/",
+      "https://northeastnorthcumbria.nhs.uk/about-us/"
+    ]
+  },
+  {
+    "name": "NHS North East London ICB",
+    "url": "https://northeastlondon.icb.nhs.uk/",
+    "start_urls": [
+      "https://northeastlondon.icb.nhs.uk/publications/",
+      "https://northeastlondon.icb.nhs.uk/about-us/our-plans/"
+    ]
+  },
+  {
+    "name": "NHS North West London ICB",
+    "url": "https://www.nwlondonicb.nhs.uk/",
+    "start_urls": [
+      "https://www.nwlondonicb.nhs.uk/about-us/nw-london-health-and-care-strategy",
+      "https://www.nwlondonicb.nhs.uk/about-us/who-are-we/ICB/corporate-information/publication-scheme"
+    ]
+  },
+  {
+    "name": "NHS Northamptonshire ICB",
+    "url": "https://www.icnorthamptonshire.org.uk/",
+    "start_urls": [
+      "https://www.icnorthamptonshire.org.uk/icb-plan/",
+      "https://www.icnorthamptonshire.org.uk/documents/"
+    ]
+  },
+  {
+    "name": "NHS Nottingham and Nottinghamshire ICB",
+    "url": "https://notts.icb.nhs.uk/",
+    "allowed_domains": ["notts.icb.nhs.uk", "healthandcarenotts.co.uk"],
+    "start_urls": [
+      "https://notts.icb.nhs.uk/about-us/our-priorities/our-strategies-and-plans/",
+      "https://healthandcarenotts.co.uk/integrated-care-strategy/joint-forward-plan/"
+    ]
+  },
+  {
+    "name": "NHS Shropshire, Telford and Wrekin ICB",
+    "url": "https://www.shropshiretelfordandwrekin.nhs.uk/",
+    "allowed_domains": ["www.shropshiretelfordandwrekin.nhs.uk", "www.shropshiretelfordandwrekin.ics.nhs.uk"],
+    "start_urls": [
+      "https://www.shropshiretelfordandwrekin.ics.nhs.uk/integrated-care-strategy-and-joint-forward-plan/",
+      "https://www.shropshiretelfordandwrekin.nhs.uk/about-us/how-we-are-run/organisational-structure/"
+    ]
+  },
+  {
+    "name": "NHS Somerset ICB",
+    "url": "https://nhssomerset.nhs.uk/",
+    "start_urls": [
+      "https://nhssomerset.nhs.uk/publications/",
+      "https://nhssomerset.nhs.uk/resources/strategies-and-plans/"
+    ]
+  },
+  {
+    "name": "NHS South East London ICB",
+    "url": "https://www.selondonics.org/",
+    "start_urls": [
+      "https://www.selondonics.org/our-joint-forward-plan/",
+      "https://www.selondonics.org/icb/about-us/governance/publications-scheme/"
+    ]
+  },
+  {
+    "name": "NHS South West London ICB",
+    "url": "https://www.southwestlondon.icb.nhs.uk/",
+    "start_urls": [
+      "https://www.southwestlondon.icb.nhs.uk/publications/",
+      "https://www.southwestlondon.icb.nhs.uk/publications/joint-forward-plan/"
+    ]
+  },
+  {
+    "name": "NHS South Yorkshire ICB",
+    "url": "https://southyorkshire.icb.nhs.uk/",
+    "start_urls": [
+      "https://southyorkshire.icb.nhs.uk/our-information/publications",
+      "https://southyorkshire.icb.nhs.uk/about-us/our-structure/five-year-joint-forward-plan"
+    ]
+  },
+  {
+    "name": "NHS Staffordshire and Stoke-on-Trent ICB",
+    "url": "https://staffsstoke.icb.nhs.uk/",
+    "start_urls": [
+      "https://staffsstoke.icb.nhs.uk/your-nhs-integrated-care-board/our-publications/",
+      "https://staffsstoke.icb.nhs.uk/your-nhs-integrated-care-board/our-publications/plans-and-strategies/"
+    ]
+  },
+  {
+    "name": "NHS Suffolk and North East Essex ICB",
+    "url": "https://suffolkandnortheastessex.icb.nhs.uk/",
+    "start_urls": [
+      "https://suffolkandnortheastessex.icb.nhs.uk/about-us/",
+      "https://suffolkandnortheastessex.icb.nhs.uk/board-papers/"
+    ]
+  },
+  {
+    "name": "NHS Surrey Heartlands ICB",
+    "url": "https://www.surreyheartlands.org/",
+    "start_urls": [
+      "https://www.surreyheartlands.org/joint-forward-plan",
+      "https://www.surreyheartlands.org/nhs-surrey-heartlands-integrated-care-board-meetings"
+    ]
+  },
+  {
+    "name": "NHS Sussex ICB",
+    "url": "https://www.sussex.ics.nhs.uk/",
+    "start_urls": [
+      "https://www.sussex.ics.nhs.uk/our-work/",
+      "https://www.sussex.ics.nhs.uk/our-work/our-strategy/"
+    ]
+  },
+  {
+    "name": "NHS West Yorkshire ICB",
+    "url": "https://www.westyorkshire.icb.nhs.uk/",
+    "allowed_domains": ["www.westyorkshire.icb.nhs.uk", "www.wypartnership.co.uk"],
+    "start_urls": [
+      "https://www.westyorkshire.icb.nhs.uk/documents/reports",
+      "https://www.wypartnership.co.uk/publications/joint-forward-plan-2024"
+    ]
+  }
+]

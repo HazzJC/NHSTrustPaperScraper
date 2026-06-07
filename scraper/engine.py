@@ -24,6 +24,11 @@ from scraper.session import build_session
 
 
 def load_trusts(path: Path) -> list[Trust]:
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Config file not found: {path}. "
+            "Check that the path is correct and the file has been created."
+        )
     raw = json.loads(path.read_text(encoding="utf-8"))
     trusts: list[Trust] = []
     for entry in raw:
@@ -133,6 +138,7 @@ class ScraperEngine:
     def __init__(
         self,
         trusts_path: Path = Path("config/mental_health_trusts.json"),
+        icb_path: Path = Path("config/icb_config.json"),
         output_dir: Path = Path("downloads"),
         max_pages: int = 60,
         timeout: int = 30,
@@ -140,12 +146,14 @@ class ScraperEngine:
         verify_ssl: bool = False,
     ) -> None:
         self._trusts_path = trusts_path
+        self._icb_path = icb_path
         self._output_dir = output_dir
         self._max_pages = max_pages
         self._timeout = timeout
         self._crawl_delay = crawl_delay
         self._verify_ssl = verify_ssl
         self._trusts: list[Trust] = load_trusts(trusts_path)
+        self._icbs: list[Trust] = load_trusts(icb_path) if icb_path.exists() else []
         self._cache = DiscoveryCache()
         self._failure_cache = FailureCache()
         self._jobs: dict[str, ScrapeJob] = {}
@@ -154,6 +162,15 @@ class ScraperEngine:
 
     def list_trusts(self) -> list[dict]:
         return [{"name": t.name, "url": t.url, "js_render": t.js_render} for t in self._trusts]
+
+    def list_icbs(self) -> list[dict]:
+        return [{"name": t.name, "url": t.url, "js_render": t.js_render} for t in self._icbs]
+
+    def reload_config(self) -> None:
+        """Reload trust and ICB lists from disk (call after config file edits)."""
+        with self._lock:
+            self._trusts = load_trusts(self._trusts_path)
+            self._icbs = load_trusts(self._icb_path) if self._icb_path.exists() else []
 
     def start_job(
         self,
@@ -168,12 +185,16 @@ class ScraperEngine:
         crawl_delay: float = 0.5,
         ignore_cache: bool = False,
         verbose: bool = False,
+        source: str = "trust",
     ) -> ScrapeJob:
+        if source not in ("trust", "icb"):
+            raise ValueError(f"Invalid source: {source!r}. Must be 'trust' or 'icb'.")
+        pool = self._icbs if source == "icb" else self._trusts
         if trust_names is None:
-            trusts = self._trusts
+            trusts = pool
         else:
             name_set = {n.lower() for n in trust_names}
-            trusts = [t for t in self._trusts if t.name.lower() in name_set]
+            trusts = [t for t in pool if t.name.lower() in name_set]
 
         job = ScrapeJob(
             job_id=uuid.uuid4().hex,

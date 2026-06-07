@@ -55,6 +55,28 @@ class FailureCache:
                 del self._data[trust_name]
                 self._save()
 
+    def get_all(self) -> list[dict]:
+        """Return all entries as a list of dicts (name + metadata)."""
+        with self._lock:
+            return [{"name": name, **info} for name, info in self._data.items()]
+
+    def remove(self, trust_name: str) -> bool:
+        """Remove a single entry by name. Returns True if it existed."""
+        with self._lock:
+            if trust_name in self._data:
+                del self._data[trust_name]
+                self._save()
+                return True
+            return False
+
+    def clear_all(self) -> int:
+        """Remove all entries. Returns count removed."""
+        with self._lock:
+            count = len(self._data)
+            self._data = {}
+            self._save()
+            return count
+
     def _load(self) -> None:
         if self._path.exists():
             try:

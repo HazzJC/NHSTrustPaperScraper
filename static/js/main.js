@@ -1,417 +1,81 @@
-// NHS Board Paper Scraper JavaScript
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Elements
-    const runCrawlerBtn = document.getElementById('runCrawlerBtn');
-    const crawlerStatus = document.getElementById('crawlerStatus');
-    const showNewOnlyCheckbox = document.getElementById('showNewOnly');
-    const papersTableBody = document.getElementById('papersTableBody');
-    const testUrlsBtn = document.getElementById('testUrlsBtn');
-    const scrapeOnlyBtn = document.getElementById('scrapeOnlyBtn');
-    const testUrlsStatus = document.getElementById('testUrlsStatus');
-    const urlInput = document.getElementById('urlInput');
-
-    // Run crawler button
-    if (runCrawlerBtn) {
-        runCrawlerBtn.addEventListener('click', function() {
-            // Disable button and show status
-            runCrawlerBtn.disabled = true;
-            crawlerStatus.classList.remove('d-none');
-
-            // Call the API to run the crawler
-            fetch('/run-crawler', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Update the table with new results
-                updatePapersTable(data.results.board_papers);
-
-                // Show success message
-                alert('Crawler completed successfully!');
-
-                // Reload the page to show updated results
-                window.location.reload();
-            })
-            .catch(error => {
-                console.error('Error running crawler:', error);
-                alert('Error running crawler. Check the console for details.');
-            })
-            .finally(() => {
-                // Re-enable button and hide status
-                runCrawlerBtn.disabled = false;
-                crawlerStatus.classList.add('d-none');
-            });
-        });
-    }
-
-    // Test specific URLs button
-    if (testUrlsBtn) {
-        testUrlsBtn.addEventListener('click', function() {
-            // Get the URLs from the input
-            const urlsText = urlInput.value.trim();
-
-            if (!urlsText) {
-                alert('Please enter at least one URL to test.');
-                return;
-            }
-
-            // Parse URLs with @ prefix or regular line-by-line format
-            const urls = parseUrlInput(urlsText);
-
-            if (urls.length === 0) {
-                alert('Please enter at least one valid URL to test.');
-                return;
-            }
-
-            // Disable button and show status
-            testUrlsBtn.disabled = true;
-            testUrlsStatus.classList.remove('d-none');
-
-            // Call the API to test the URLs
-            const payload = { urls: urls };
-            console.log("Sending payload to server:", payload);
-
-            fetch('/test-specific-urls', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update the table with new results
-                    updatePapersTable(data.results.board_papers);
-
-                    // Show success message
-                    alert(`Test completed successfully! Found ${data.results.board_papers.length} papers.`);
-
-                    // Reload the page to show updated results
-                    window.location.reload();
-                } else {
-                    // Show error message in the status area
-                    testUrlsStatus.querySelector('span:last-child').textContent = `Error: ${data.message}`;
-                    testUrlsStatus.classList.remove('alert-info');
-                    testUrlsStatus.classList.add('alert-danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error testing URLs:', error);
-                // Show error in the status area
-                testUrlsStatus.querySelector('span:last-child').textContent = `Error testing URLs: ${error.message}`;
-                testUrlsStatus.classList.remove('alert-info');
-                testUrlsStatus.classList.add('alert-danger');
-            })
-            .finally(() => {
-                // Re-enable button but don't hide status if there was an error
-                testUrlsBtn.disabled = false;
-                if (!testUrlsStatus.classList.contains('alert-danger')) {
-                    testUrlsStatus.classList.add('d-none');
-                }
-                testUrlsStatus.querySelector('span:last-child').textContent = 'Testing URLs... This may take a while.';
-            });
-        });
-    }
-
-    // Scrape Only button
-    if (scrapeOnlyBtn) {
-        scrapeOnlyBtn.addEventListener('click', function() {
-            // Get the URLs from the input
-            const urlsText = urlInput.value.trim();
-
-            if (!urlsText) {
-                alert('Please enter at least one URL to test.');
-                return;
-            }
-
-            // Parse URLs with @ prefix or regular line-by-line format
-            const urls = parseUrlInput(urlsText);
-
-            if (urls.length === 0) {
-                alert('Please enter at least one valid URL to test.');
-                return;
-            }
-
-            // Disable buttons and show status
-            scrapeOnlyBtn.disabled = true;
-            testUrlsBtn.disabled = true;
-            testUrlsStatus.classList.remove('d-none');
-            testUrlsStatus.querySelector('span:last-child').textContent = 'Scraping URLs... This may take a while.';
-
-            // Call the API to test the URLs with scrape_only flag
-            const payload = {
-                urls: urls,
-                scrape_only: true  // This flag tells the backend to skip PDF analysis
-            };
-
-            fetch('/test-specific-urls', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update the table with new results
-                    updatePapersTable(data.results.board_papers);
-
-                    // Show success message
-                    alert(`Scraping completed successfully! Found ${data.results.board_papers.length} papers.`);
-
-                    // Reload the page to show updated results
-                    window.location.reload();
-                } else {
-                    // Show error message in the status area
-                    testUrlsStatus.querySelector('span:last-child').textContent = `Error: ${data.message}`;
-                    testUrlsStatus.classList.remove('alert-info');
-                    testUrlsStatus.classList.add('alert-danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error scraping URLs:', error);
-                // Show error in the status area
-                testUrlsStatus.querySelector('span:last-child').textContent = `Error scraping URLs: ${error.message}`;
-                testUrlsStatus.classList.remove('alert-info');
-                testUrlsStatus.classList.add('alert-danger');
-            })
-            .finally(() => {
-                // Re-enable buttons but don't hide status if there was an error
-                scrapeOnlyBtn.disabled = false;
-                testUrlsBtn.disabled = false;
-                if (!testUrlsStatus.classList.contains('alert-danger')) {
-                    testUrlsStatus.classList.add('d-none');
-                }
-                testUrlsStatus.querySelector('span:last-child').textContent = 'Testing URLs... This may take a while.';
-            });
-        });
-    }
-
-    // Function to parse URL input text that may contain @ prefixes
-    function parseUrlInput(inputText) {
-        console.log("Parsing URL input:", inputText);
-
-        // First check if the input contains @ symbols (for the special format)
-        if (inputText.includes('@')) {
-            // Find all URLs with @ prefix
-            const urlMatches = inputText.match(/@https?:\/\/[^\s]+/g);
-
-            if (urlMatches) {
-                console.log("Found @ prefixed URLs:", urlMatches);
-                // Remove the @ prefix from each URL
-                const parsedUrls = urlMatches.map(url => url.substring(1).trim());
-                console.log("Parsed URLs:", parsedUrls);
-                return parsedUrls;
-            }
-            console.log("No valid URLs found with @ prefix");
-            return [];
-        } else {
-            // Regular line-by-line format (backward compatibility)
-            const parsedUrls = inputText.split('\n')
-                .map(url => url.trim())
-                .filter(url => url.length > 0);
-            console.log("Parsed line-by-line URLs:", parsedUrls);
-            return parsedUrls;
-        }
-    }
-
-    // Show new papers only checkbox
-    if (showNewOnlyCheckbox) {
-        showNewOnlyCheckbox.addEventListener('change', function() {
-            const paperRows = document.querySelectorAll('.paper-row');
-
-            if (this.checked) {
-                // Show only new papers
-                paperRows.forEach(row => {
-                    if (!row.classList.contains('new-paper')) {
-                        row.classList.add('hidden');
-                    }
-                });
-            } else {
-                // Show all papers
-                paperRows.forEach(row => {
-                    row.classList.remove('hidden');
-                });
-            }
-        });
-    }
-
-    // Function to update the papers table
-    function updatePapersTable(papers) {
-        // Clear the table
-        papersTableBody.innerHTML = '';
-
-        if (papers && papers.length > 0) {
-            // Sort papers chronologically by sort_date (yyyy-mm format)
-            papers.sort((a, b) => {
-                const dateA = a.sort_date || '9999-99';
-                const dateB = b.sort_date || '9999-99';
-                return dateA.localeCompare(dateB);
-            });
-
-            // Add papers to the table
-            papers.forEach(paper => {
-                const row = document.createElement('tr');
-                row.className = `paper-row ${paper.is_new ? 'table-success new-paper' : ''}`;
-
-                // Extract year and month for display
-                let formattedDate = paper.date || '';
-
-                // Try to improve the date display using sort_date if available
-                if (paper.sort_date && paper.sort_date !== '9999-99') {
-                    const parts = paper.sort_date.split('-');
-                    if (parts.length === 2) {
-                        const year = parts[0];
-                        const monthNum = parseInt(parts[1]);
-
-                        if (monthNum > 0 && monthNum <= 12) {
-                            const monthNames = [
-                                'January', 'February', 'March', 'April', 'May', 'June',
-                                'July', 'August', 'September', 'October', 'November', 'December'
-                            ];
-                            formattedDate = `${monthNames[monthNum-1]} ${year}`;
-                        } else {
-                            formattedDate = year;
-                        }
-                    }
-                }
-
-                row.innerHTML = `
-                    <td>${paper.title}</td>
-                    <td>${paper.organization}</td>
-                    <td>${paper.org_type}</td>
-                    <td>${formattedDate}</td>
-                    <td>
-                        <a href="${paper.url}" target="_blank" class="btn btn-sm btn-primary">View</a>
-                    </td>
-                `;
-
-                papersTableBody.appendChild(row);
-            });
-        } else {
-            // Show no papers message
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td colspan="5" class="text-center">No board papers found from 2024 onwards.</td>
-            `;
-            papersTableBody.appendChild(row);
-        }
-    }
-});
+// NHS Evidence Scraper — main.js
+'use strict';
 
 // ---------------------------------------------------------------------------
-// ScrapeDashboard — wires the new "Scrape Board Papers" control card
+// EvidenceScraper — unified multi-source controller
 // ---------------------------------------------------------------------------
-(function ScrapeDashboard() {
-    'use strict';
+(function EvidenceScraper() {
 
-    let currentJobId = null;
-    let eventSource = null;
+    const TYPE_LABELS = {
+        board:                    'Board Papers',
+        supplementary:            'Supplementary',
+        strategy:                 'Strategic Reporting',
+        digital_strategy:         'Digital Strategy',
+        quality_account:          'Quality Account',
+        annual_report:            'Annual Report',
+        cqc_report:               'CQC Report',
+        joint_forward_plan:       'Joint Forward Plan',
+        icb_mh_strategy:          'ICB MH Strategy',
+        integrated_care_strategy: 'Integrated Care Strategy',
+    };
 
-    const startBtn           = document.getElementById('startScrapeBtn');
-    const cancelBtn          = document.getElementById('cancelScrapeBtn');
-    const logPanel           = document.getElementById('logPanel');
-    const logOutput          = document.getElementById('logOutput');
-    const clearLogBtn        = document.getElementById('clearLogBtn');
-    const scrapeSummary      = document.getElementById('scrapeSummary');
-    const scrapeProgress     = document.getElementById('scrapeProgress');
-    const trustSelect        = document.getElementById('trustSelect');
-    const selectAllBtn       = document.getElementById('selectAllTrustsBtn');
-    const clearAllBtn        = document.getElementById('clearAllTrustsBtn');
-    const trustSpinner       = document.getElementById('trustLoadingSpinner');
-    const resultsTableSection= document.getElementById('resultsTableSection');
-    const resultsTableBody   = document.getElementById('resultsTableBody');
-    const exportCsvBtn       = document.getElementById('exportResultsCsvBtn');
+    const TRUST_TYPES = [
+        ['typeBoard',          'board'],
+        ['typeQualityAccount', 'quality_account'],
+        ['typeAnnualReport',   'annual_report'],
+        ['typeStrategy',       'strategy'],
+        ['typeDigital',        'digital_strategy'],
+        ['typeSupp',           'supplementary'],
+        ['typeCqcReport',      'cqc_report'],
+    ];
 
-    let lastJobId = null;
-    let resultsData = [];
+    const ICB_TYPES = [
+        ['typeJFP',         'joint_forward_plan'],
+        ['typeMHStrategy',  'icb_mh_strategy'],
+        ['typeICS',         'integrated_care_strategy'],
+    ];
 
-    if (!startBtn) return; // guard if card not present
+    // Per-source job state
+    const jobs = {
+        trust:    { jobId: null, es: null, total: 0, completed: 0, done: false },
+        icb:      { jobId: null, es: null, total: 0, completed: 0, done: false },
+        national: { jobId: null, es: null, total: 0, fetched: 0, done: false },
+    };
 
-    // ---- Populate trust list -----------------------------------------------
-    function loadTrusts() {
-        if (trustSpinner) trustSpinner.classList.remove('d-none');
-        fetch('/scrape/trusts')
-            .then(r => r.json())
-            .then(trusts => {
-                trustSelect.innerHTML = '';
-                trusts.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.name;
-                    opt.textContent = t.name;
-                    trustSelect.appendChild(opt);
-                });
-            })
-            .catch(() => {
-                trustSelect.innerHTML = '<option disabled>Failed to load trusts</option>';
-            })
-            .finally(() => {
-                if (trustSpinner) trustSpinner.classList.add('d-none');
-            });
-    }
+    // Track which sources are active in current run
+    let activeSources = [];
+    // Track last trust/ICB job IDs for CSV export
+    let lastTrustJobId = null;
+    let lastICBJobId   = null;
 
-    selectAllBtn && selectAllBtn.addEventListener('click', () => {
-        Array.from(trustSelect.options).forEach(o => o.selected = true);
-    });
-    clearAllBtn && clearAllBtn.addEventListener('click', () => {
-        Array.from(trustSelect.options).forEach(o => o.selected = false);
-    });
+    const startBtn       = document.getElementById('startAllBtn');
+    const globalStatus   = document.getElementById('globalStatus');
+    const progressSection= document.getElementById('progressSection');
+    const resultsSection = document.getElementById('resultsSection');
+    const scrapeSummary  = document.getElementById('scrapeSummary');
+    const resultsHeaderRow = document.getElementById('resultsHeaderRow');
+    const resultsBody    = document.getElementById('resultsBody');
+    const exportCsvBtn   = document.getElementById('exportCsvBtn');
 
-    // ---- Log helpers ---------------------------------------------------------
-    function appendLog(text) {
-        logOutput.textContent += text + '\n';
-        logOutput.scrollTop = logOutput.scrollHeight;
-    }
+    if (!startBtn) return;
 
-    clearLogBtn && clearLogBtn.addEventListener('click', () => {
-        logOutput.textContent = '';
+    // ── Source checkbox toggles ─────────────────────────────────────────────
+    document.querySelectorAll('.source-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => toggleSourcePanel(cb.value, cb.checked));
     });
 
-    // ---- Collect form state --------------------------------------------------
-    function getSelectedTypes() {
-        const types = [];
-        ['typeBoard','typeSupp','typeStrategy','typeDigital'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el && el.checked) types.push(el.value);
-        });
-        return types.length ? types : ['board'];
+    function toggleSourcePanel(source, active) {
+        const panelIds = { trust: 'trustPanel', icb: 'icbPanel', national: 'nationalPanel' };
+        const panel = document.getElementById(panelIds[source]);
+        if (!panel) return;
+        panel.classList.toggle('d-none', !active);
+        panel.classList.toggle('panel-active', active);
     }
+    // Ensure initial state matches checked state
+    document.querySelectorAll('.source-checkbox').forEach(cb => toggleSourcePanel(cb.value, cb.checked));
 
-    function getSelectedTrusts() {
-        const selected = Array.from(trustSelect.selectedOptions).map(o => o.value);
-        return selected.length ? selected : null; // null = all 47
-    }
-
-    function getDateFilters() {
-        const filters = {};
-        [['typeBoard','board'],['typeSupp','supplementary'],['typeStrategy','strategy'],['typeDigital','digital_strategy']].forEach(([cbId, type]) => {
-            const cb = document.getElementById(cbId);
-            if (cb && cb.checked) {
-                const input = document.getElementById('dateFilter_' + type);
-                filters[type] = input ? (parseInt(input.value, 10) || 0) : 0;
-            }
-        });
-        return filters;
-    }
-
-    // ---- Show/hide date filter rows when type checkboxes change ---------------
-    [['typeBoard','board'],['typeSupp','supplementary'],['typeStrategy','strategy'],['typeDigital','digital_strategy']].forEach(([cbId, type]) => {
+    // ── Type checkbox → show/hide date filter row ───────────────────────────
+    [...TRUST_TYPES, ...ICB_TYPES].forEach(([cbId, type]) => {
         const cb = document.getElementById(cbId);
         if (!cb) return;
         cb.addEventListener('change', () => {
@@ -420,191 +84,683 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ---- SSE handler ---------------------------------------------------------
-    function handleSseMessage(evt) {
-        let msg;
-        try { msg = JSON.parse(evt.data); } catch { return; }
+    // ── Load org lists ──────────────────────────────────────────────────────
+    function loadOrgList(endpoint, selectId, spinnerId) {
+        const sel = document.getElementById(selectId);
+        const spinner = document.getElementById(spinnerId);
+        if (!sel) return;
+        if (spinner) spinner.classList.remove('d-none');
+        fetch(endpoint)
+            .then(r => r.json())
+            .then(items => {
+                sel.innerHTML = '';
+                items.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.textContent = t.name;
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(() => { sel.innerHTML = '<option disabled>Failed to load</option>'; })
+            .finally(() => { if (spinner) spinner.classList.add('d-none'); });
+    }
 
-        const { event, trust, index, total, found, downloaded, error, message } = msg;
+    loadOrgList('/scrape/trusts', 'trustSelect', 'trustLoadingSpinner');
+    loadOrgList('/scrape/icbs',   'icbSelect',   'icbLoadingSpinner');
 
-        if (event === 'trust_start') {
-            appendLog(`[${index}/${total}] ${trust}`);
-            if (scrapeProgress) scrapeProgress.textContent = `${index} / ${total} trusts`;
-        } else if (event === 'trust_done') {
-            appendLog(`  ✓ found ${found || 0}, downloaded ${downloaded || 0}`);
-        } else if (event === 'trust_error') {
-            appendLog(`  ✗ ERROR: ${error || 'unknown error'}`);
-        } else if (event === 'candidate_found') {
-            appendLog(`  → [${msg.report_type}] ${msg.date} ${msg.url}`);
-        } else if (event === 'candidate_skipped') {
-            appendLog(`  ↩ [already exists] ${msg.url}`);
-        } else if (event === 'trust_retry') {
-            appendLog(`  ↺ [${msg.trust}] Cached pages empty — running full crawl`);
-        } else if (event === 'page_scan') {
-            appendLog(`    · ${msg.url}`);
-        } else if (event === 'done') {
-            const failCount = msg.failures || 0;
-            appendLog(`\nDone. ${msg.completed}/${msg.total} trusts processed, ${msg.downloads} file(s) downloaded.${failCount > 0 ? ` ${failCount} failure(s).` : ''}`);
-            setRunning(false);
-            scrapeSummary.classList.remove('d-none', 'alert-success', 'alert-warning');
-            scrapeSummary.classList.add(failCount > 0 ? 'alert-warning' : 'alert-success');
-            let summaryHtml = `Scrape complete: ${msg.completed} trusts processed, ${msg.downloads} file(s) downloaded.`;
-            if (failCount > 0) {
-                const names = (msg.failed_names || []).map(n => `<li>${n}</li>`).join('');
-                summaryHtml += `<br><strong>${failCount} trust(s) had no results or errors:</strong><ul class="mb-0 mt-1">${names}</ul>`;
+    document.getElementById('selectAllTrustsBtn') && document.getElementById('selectAllTrustsBtn').addEventListener('click', () => {
+        Array.from(document.getElementById('trustSelect').options).forEach(o => o.selected = true);
+    });
+    document.getElementById('clearAllTrustsBtn') && document.getElementById('clearAllTrustsBtn').addEventListener('click', () => {
+        Array.from(document.getElementById('trustSelect').options).forEach(o => o.selected = false);
+    });
+    document.getElementById('selectAllICBsBtn') && document.getElementById('selectAllICBsBtn').addEventListener('click', () => {
+        Array.from(document.getElementById('icbSelect').options).forEach(o => o.selected = true);
+    });
+    document.getElementById('clearAllICBsBtn') && document.getElementById('clearAllICBsBtn').addEventListener('click', () => {
+        Array.from(document.getElementById('icbSelect').options).forEach(o => o.selected = false);
+    });
+
+    // ── Load national datasets ──────────────────────────────────────────────
+    fetch('/national/sources')
+        .then(r => r.json())
+        .then(sources => {
+            const list = document.getElementById('nationalSourceList');
+            if (!list) return;
+            list.innerHTML = '';
+            sources.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `<input class="form-check-input national-source-cb" type="checkbox"
+                                        id="ns_${s.key}" value="${s.key}" checked>
+                                 <label class="form-check-label small" for="ns_${s.key}">${s.display_name}</label>`;
+                list.appendChild(div);
+            });
+        })
+        .catch(() => {
+            const list = document.getElementById('nationalSourceList');
+            if (list) list.innerHTML = '<span class="text-danger small">Failed to load dataset list.</span>';
+        });
+
+    // ── Log helpers per source ──────────────────────────────────────────────
+    const logEls = { trust: 'logTrust', icb: 'logICB', national: 'logNational' };
+    function appendLog(source, text) {
+        const el = document.getElementById(logEls[source]);
+        if (!el) return;
+        el.textContent += text + '\n';
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // ── Badge + progress helpers ────────────────────────────────────────────
+    function setBadge(source, text, cls) {
+        const badge = document.getElementById('badge' + cap(source));
+        if (!badge) return;
+        badge.textContent = text;
+        badge.className = 'badge me-2 ' + cls;
+    }
+    function setProgress(source, done, total) {
+        const bar   = document.getElementById('bar'   + cap(source));
+        const count = document.getElementById('count' + cap(source));
+        const pct = total > 0 ? Math.round(done / total * 100) : 0;
+        if (bar)   bar.style.width = pct + '%';
+        if (count) count.textContent = total > 0 ? `${done} / ${total}` : '';
+    }
+    function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    function markSlotDone(source, success) {
+        const slot = document.getElementById('progress' + cap(source));
+        if (!slot) return;
+        slot.classList.toggle('slot-done',  success);
+        slot.classList.toggle('slot-error', !success);
+    }
+
+    // ── Collect form settings ───────────────────────────────────────────────
+    function getSharedSettings() {
+        return {
+            parallel_trusts: parseInt(document.getElementById('parallelTrusts').value, 10) || 5,
+            crawl_delay:     parseFloat(document.getElementById('crawlDelay').value)       || 0.5,
+            limit_per_type:  parseInt(document.getElementById('limitPerType').value, 10)  || 1,
+            dry_run:         document.getElementById('dryRunChk').checked,
+            all_matches:     document.getElementById('allMatchesChk').checked,
+            max_pages:       parseInt(document.getElementById('maxPages').value, 10)       || 60,
+            ignore_cache:    document.getElementById('ignoreCacheChk').checked,
+        };
+    }
+
+    function getSelectedTypes(typePairs) {
+        const types = [];
+        typePairs.forEach(([cbId, val]) => {
+            const cb = document.getElementById(cbId);
+            if (cb && cb.checked) types.push(val);
+        });
+        return types.length ? types : [typePairs[0][1]];
+    }
+
+    function getDateFilters(typePairs) {
+        const filters = {};
+        typePairs.forEach(([cbId, type]) => {
+            const cb = document.getElementById(cbId);
+            if (cb && cb.checked) {
+                const inp = document.getElementById('dateFilter_' + type);
+                filters[type] = inp ? (parseInt(inp.value, 10) || 0) : 0;
             }
-            scrapeSummary.innerHTML = summaryHtml;
-            if (eventSource) { eventSource.close(); eventSource = null; }
-            // Load results table
-            if (currentJobId) {
-                lastJobId = currentJobId;
-                fetchResultsTable(currentJobId);
-            }
-        } else if (event === 'cancelled') {
-            appendLog('\nJob cancelled.');
-            setRunning(false);
-            if (eventSource) { eventSource.close(); eventSource = null; }
+        });
+        return filters;
+    }
+
+    function getSelectedOrgs(selectId) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return null;
+        const selected = Array.from(sel.selectedOptions).map(o => o.value);
+        return selected.length ? selected : null;
+    }
+
+    // ── Check all done → re-enable button ──────────────────────────────────
+    function checkAllDone() {
+        const allDone = activeSources.every(s => jobs[s].done);
+        if (allDone) {
+            startBtn.disabled = false;
+            globalStatus.textContent = 'All sources complete.';
+            // refresh failure log after run
+            if (typeof loadFailureLog === 'function') loadFailureLog();
         }
     }
 
-    // ---- UI state toggle -----------------------------------------------------
-    function setRunning(running) {
-        startBtn.disabled = running;
-        cancelBtn.classList.toggle('d-none', !running);
-        if (!running && scrapeProgress) scrapeProgress.textContent = '';
+    // ── SSE: trust / icb ───────────────────────────────────────────────────
+    function openScrapeStream(source, jobId, orgLabel) {
+        const es = new EventSource(`/scrape/stream/${jobId}`);
+        jobs[source].es = es;
+
+        es.onmessage = evt => {
+            let msg;
+            try { msg = JSON.parse(evt.data); } catch { return; }
+            const { event, trust, index, total, found, downloaded, error } = msg;
+
+            if (event === 'trust_start') {
+                jobs[source].total = total;
+                setProgress(source, index - 1, total);
+                appendLog(source, `[${index}/${total}] ${trust}`);
+            } else if (event === 'trust_done') {
+                jobs[source].completed++;
+                setProgress(source, index || jobs[source].completed, jobs[source].total);
+                appendLog(source, `  ✓ found ${found || 0}, downloaded ${downloaded || 0}`);
+            } else if (event === 'trust_error') {
+                appendLog(source, `  ✗ ERROR: ${error || 'unknown'}`);
+            } else if (event === 'candidate_found') {
+                appendLog(source, `  → [${msg.report_type}] ${msg.date} ${msg.url}`);
+            } else if (event === 'candidate_skipped') {
+                appendLog(source, `  ↩ already exists: ${msg.url}`);
+            } else if (event === 'trust_retry') {
+                appendLog(source, `  ↺ cached pages empty — running full crawl`);
+            } else if (event === 'done') {
+                const failCount = msg.failures || 0;
+                appendLog(source, `\nDone. ${msg.completed}/${msg.total} ${orgLabel}s processed, ${msg.downloads} downloaded.${failCount > 0 ? ` ${failCount} failure(s).` : ''}`);
+                setProgress(source, msg.total || jobs[source].total, msg.total || jobs[source].total);
+                setBadge(source, failCount > 0 ? 'Done (with failures)' : 'Done', failCount > 0 ? 'bg-warning text-dark' : 'bg-success');
+                markSlotDone(source, failCount === 0);
+                es.close();
+                jobs[source].done = true;
+                // show results section for trust/ICB
+                showResultsAfterRun(source, jobId, msg);
+                checkAllDone();
+            } else if (event === 'cancelled') {
+                appendLog(source, '\nCancelled.');
+                setBadge(source, 'Cancelled', 'bg-secondary');
+                es.close();
+                jobs[source].done = true;
+                checkAllDone();
+            }
+        };
+
+        es.onerror = () => {
+            appendLog(source, '[connection lost]');
+            setBadge(source, 'Error', 'bg-danger');
+            markSlotDone(source, false);
+            es.close();
+            jobs[source].done = true;
+            checkAllDone();
+        };
     }
 
-    // ---- Start ---------------------------------------------------------------
-    startBtn.addEventListener('click', () => {
-        const types = getSelectedTypes();
-        const trustNames = getSelectedTrusts();
-        const allMatches = document.getElementById('allMatchesChk').checked;
-        const dryRun = document.getElementById('dryRunChk').checked;
-        const limitPerType = parseInt(document.getElementById('limitPerType').value, 10) || 1;
-        const parallelTrusts = parseInt(document.getElementById('parallelTrusts').value, 10) || 5;
-        const maxPages = parseInt(document.getElementById('maxPages').value, 10) || 60;
-        const crawlDelay = parseFloat(document.getElementById('crawlDelay').value) || 0.5;
-        const ignoreCache = document.getElementById('ignoreCacheChk').checked;
-        const verbose = document.getElementById('verboseChk').checked;
-        const dateFilters = getDateFilters();
+    // ── SSE: national ──────────────────────────────────────────────────────
+    function openNationalStream(jobId, totalDatasets) {
+        const es = new EventSource(`/national/stream/${jobId}`);
+        jobs.national.es = es;
+        jobs.national.total = totalDatasets;
+        let fetched = 0;
 
-        scrapeSummary.classList.add('d-none');
-        if (resultsTableSection) resultsTableSection.classList.add('d-none');
-        logPanel.classList.remove('d-none');
-        logOutput.textContent = '';
-        setRunning(true);
-        appendLog(`Starting scrape: types=[${types.join(', ')}], trusts=${trustNames ? trustNames.length + ' selected' : 'all 47'}, workers=${parallelTrusts}, dry_run=${dryRun}`);
+        es.addEventListener('fetch_start', evt => {
+            const d = JSON.parse(evt.data);
+            appendLog('national', `↓  ${d.name}`);
+            setBadge('national', 'Fetching…', 'bg-info text-dark');
+        });
+        es.addEventListener('fetch_done', evt => {
+            const d = JSON.parse(evt.data);
+            fetched++;
+            setProgress('national', fetched, totalDatasets);
+            appendLog('national', `  ✓ ${d.name} — ${d.version || ''}`);
+        });
+        es.addEventListener('fetch_skipped', evt => {
+            const d = JSON.parse(evt.data);
+            fetched++;
+            setProgress('national', fetched, totalDatasets);
+            appendLog('national', `  ↩ ${d.name} — already up-to-date`);
+        });
+        es.addEventListener('fetch_error', evt => {
+            const d = JSON.parse(evt.data);
+            fetched++;
+            setProgress('national', fetched, totalDatasets);
+            appendLog('national', `  ✗ ${d.name} — ${d.error}`);
+        });
+        es.addEventListener('done', evt => {
+            const d = JSON.parse(evt.data);
+            const results = d.summary || [];
+            const ok      = results.filter(r => !r.error && !r.skipped).length;
+            const skipped = results.filter(r => r.skipped).length;
+            const errors  = results.filter(r => r.error).length;
+            appendLog('national', `\nDone. ${ok} new, ${skipped} up-to-date, ${errors} error(s).`);
+            setBadge('national', errors > 0 ? 'Done (errors)' : 'Done', errors > 0 ? 'bg-warning text-dark' : 'bg-success');
+            markSlotDone('national', errors === 0);
+            setProgress('national', totalDatasets, totalDatasets);
+            es.close();
+            jobs.national.done = true;
+            checkAllDone();
+        });
+        es.onerror = () => {
+            appendLog('national', '[connection lost]');
+            setBadge('national', 'Error', 'bg-danger');
+            markSlotDone('national', false);
+            es.close();
+            jobs.national.done = true;
+            checkAllDone();
+        };
+    }
 
-        fetch('/scrape/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                trust_names: trustNames,
-                types: types,
-                all_matches: allMatches,
-                limit_per_type: limitPerType,
-                dry_run: dryRun,
-                parallel_trusts: parallelTrusts,
-                date_filters: dateFilters,
-                max_pages: maxPages,
-                crawl_delay: crawlDelay,
-                ignore_cache: ignoreCache,
-                verbose: verbose,
-            }),
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) {
-                appendLog('Error: ' + data.error);
-                setRunning(false);
-                return;
+    // ── Show results table after trust/ICB run completes ───────────────────
+    function showResultsAfterRun(source, jobId, doneMsg) {
+        if (source === 'trust') lastTrustJobId = jobId;
+        if (source === 'icb')   lastICBJobId   = jobId;
+
+        // show summary alert
+        const failCount = doneMsg.failures || 0;
+        scrapeSummary.classList.remove('d-none', 'alert-success', 'alert-warning');
+        scrapeSummary.classList.add(failCount > 0 ? 'alert-warning' : 'alert-success');
+        const orgLabel = source === 'icb' ? 'ICB' : 'trust';
+        let html = `${cap(source)}: ${doneMsg.completed} ${orgLabel}(s) processed, ${doneMsg.downloads} file(s) downloaded.`;
+        if (failCount > 0) {
+            const names = (doneMsg.failed_names || []).map(n => `<li>${n}</li>`).join('');
+            html += ` <strong>${failCount} had no results:</strong><ul class="mb-0 mt-1">${names}</ul>`;
+        }
+        scrapeSummary.innerHTML = (scrapeSummary.innerHTML || '') + (scrapeSummary.innerHTML ? '<br>' : '') + html;
+        resultsSection.classList.remove('d-none');
+
+        // fetch and merge results table
+        fetch(`/scrape/results/${jobId}`)
+            .then(r => r.json())
+            .then(rows => renderResultsTable(rows))
+            .catch(() => {});
+    }
+
+    let allResultsRows = [];
+
+    function renderResultsTable(newRows) {
+        // merge rows with existing (different sources may contribute different columns)
+        newRows.forEach(r => {
+            const idx = allResultsRows.findIndex(e => e.trust === r.trust);
+            if (idx >= 0) {
+                allResultsRows[idx] = Object.assign({}, allResultsRows[idx], r);
+            } else {
+                allResultsRows.push(r);
             }
-            currentJobId = data.job_id;
-            appendLog(`Job ${currentJobId} started (${data.trust_count} trusts)`);
+        });
+        const allKeys = Object.keys(TYPE_LABELS);
+        const activeCols = allKeys.filter(k => allResultsRows.some(r => Array.isArray(r[k]) && r[k].length));
 
-            eventSource = new EventSource(`/scrape/stream/${currentJobId}`);
-            eventSource.onmessage = handleSseMessage;
-            eventSource.onerror = () => {
-                appendLog('[connection lost]');
-                setRunning(false);
-                eventSource.close();
-                eventSource = null;
-            };
-        })
-        .catch(err => {
-            appendLog('Request failed: ' + err);
-            setRunning(false);
+        if (resultsHeaderRow) {
+            resultsHeaderRow.innerHTML = '<th>Organisation</th>' +
+                activeCols.map(k => `<th>${TYPE_LABELS[k]}</th>`).join('');
+        }
+        if (resultsBody) {
+            resultsBody.innerHTML = '';
+            allResultsRows.forEach(row => {
+                const tr = document.createElement('tr');
+                let html = `<td>${row.trust}</td>`;
+                activeCols.forEach(key => {
+                    const val = row[key];
+                    html += (val && val.length)
+                        ? `<td class="text-success fw-semibold">${val.join('<br>')}</td>`
+                        : `<td class="text-muted">—</td>`;
+                });
+                tr.innerHTML = html;
+                resultsBody.appendChild(tr);
+            });
+        }
+    }
+
+    // ── CSV export ─────────────────────────────────────────────────────────
+    exportCsvBtn && exportCsvBtn.addEventListener('click', () => {
+        const jobId = lastTrustJobId || lastICBJobId;
+        if (jobId) {
+            window.location.href = `/scrape/export/${jobId}`;
+        } else {
+            // fall back to client-side CSV from in-memory results
+            if (!allResultsRows.length) return;
+            const allKeys = Object.keys(TYPE_LABELS);
+            const activeCols = allKeys.filter(k => allResultsRows.some(r => Array.isArray(r[k]) && r[k].length));
+            const header = ['Organisation', ...activeCols.map(k => TYPE_LABELS[k])];
+            const lines = [header.map(h => `"${h}"`).join(',')];
+            allResultsRows.forEach(row => {
+                const cells = [row.trust, ...activeCols.map(k => {
+                    const v = row[k];
+                    return Array.isArray(v) ? v.join('; ') : (v || '—');
+                })];
+                lines.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','));
+            });
+            const blob = new Blob([lines.join('\r\n')], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url;
+            a.download = `scrape-results-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    });
+
+    // ── Cancel buttons ─────────────────────────────────────────────────────
+    ['trust', 'icb'].forEach(source => {
+        const btn = document.getElementById('cancel' + cap(source) + 'Btn');
+        btn && btn.addEventListener('click', () => {
+            const jobId = jobs[source].jobId;
+            if (!jobId) return;
+            fetch(`/scrape/cancel/${jobId}`, { method: 'DELETE' }).catch(() => {});
+            appendLog(source, 'Cancellation requested…');
         });
     });
 
-    // ---- Cancel --------------------------------------------------------------
-    cancelBtn.addEventListener('click', () => {
-        if (!currentJobId) return;
-        fetch(`/scrape/cancel/${currentJobId}`, { method: 'DELETE' })
-            .catch(() => {});
-        appendLog('Cancellation requested…');
+    // ── Start All ──────────────────────────────────────────────────────────
+    startBtn.addEventListener('click', () => {
+        activeSources = Array.from(document.querySelectorAll('.source-checkbox:checked')).map(cb => cb.value);
+        if (!activeSources.length) {
+            globalStatus.textContent = 'Select at least one source.';
+            return;
+        }
+
+        // reset state
+        activeSources.forEach(s => { jobs[s].done = false; jobs[s].jobId = null; });
+        allResultsRows = [];
+        lastTrustJobId = null;
+        lastICBJobId = null;
+
+        startBtn.disabled = true;
+        globalStatus.textContent = `Starting ${activeSources.length} source(s)…`;
+        progressSection.classList.remove('d-none');
+        resultsSection.classList.add('d-none');
+        if (scrapeSummary) { scrapeSummary.classList.add('d-none'); scrapeSummary.innerHTML = ''; }
+        if (resultsBody) resultsBody.innerHTML = '';
+
+        // show only active progress slots, hide others
+        ['trust', 'icb', 'national'].forEach(s => {
+            const slot = document.getElementById('progress' + cap(s));
+            if (!slot) return;
+            const active = activeSources.includes(s);
+            slot.classList.toggle('d-none', !active);
+            slot.classList.remove('slot-done', 'slot-error');
+            if (active) {
+                setBadge(s, 'Starting', 'bg-secondary');
+                setProgress(s, 0, 0);
+                const logEl = document.getElementById('log' + cap(s));
+                if (logEl) logEl.textContent = '';
+            }
+        });
+
+        const shared = getSharedSettings();
+
+        // Fire trust job
+        if (activeSources.includes('trust')) {
+            const payload = {
+                ...shared,
+                source: 'trust',
+                types: getSelectedTypes(TRUST_TYPES),
+                date_filters: getDateFilters(TRUST_TYPES),
+                trust_names: getSelectedOrgs('trustSelect'),
+            };
+            fetch('/scrape/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        appendLog('trust', 'Error: ' + data.error);
+                        setBadge('trust', 'Error', 'bg-danger');
+                        jobs.trust.done = true; checkAllDone(); return;
+                    }
+                    jobs.trust.jobId = data.job_id;
+                    jobs.trust.total = data.trust_count || 0;
+                    setBadge('trust', 'Running', 'bg-primary');
+                    appendLog('trust', `Job ${data.job_id} started (${data.trust_count} trusts)`);
+                    openScrapeStream('trust', data.job_id, 'trust');
+                })
+                .catch(err => {
+                    appendLog('trust', 'Request failed: ' + err);
+                    setBadge('trust', 'Error', 'bg-danger');
+                    jobs.trust.done = true; checkAllDone();
+                });
+        }
+
+        // Fire ICB job
+        if (activeSources.includes('icb')) {
+            const payload = {
+                ...shared,
+                source: 'icb',
+                types: getSelectedTypes(ICB_TYPES),
+                date_filters: getDateFilters(ICB_TYPES),
+                trust_names: getSelectedOrgs('icbSelect'),
+            };
+            fetch('/scrape/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        appendLog('icb', 'Error: ' + data.error);
+                        setBadge('icb', 'Error', 'bg-danger');
+                        jobs.icb.done = true; checkAllDone(); return;
+                    }
+                    jobs.icb.jobId = data.job_id;
+                    jobs.icb.total = data.trust_count || 0;
+                    setBadge('icb', 'Running', 'bg-primary');
+                    appendLog('icb', `Job ${data.job_id} started (${data.trust_count} ICBs)`);
+                    openScrapeStream('icb', data.job_id, 'ICB');
+                })
+                .catch(err => {
+                    appendLog('icb', 'Request failed: ' + err);
+                    setBadge('icb', 'Error', 'bg-danger');
+                    jobs.icb.done = true; checkAllDone();
+                });
+        }
+
+        // Fire national job
+        if (activeSources.includes('national')) {
+            const selectedKeys = Array.from(document.querySelectorAll('.national-source-cb:checked')).map(cb => cb.value);
+            if (!selectedKeys.length) {
+                appendLog('national', 'No datasets selected.');
+                setBadge('national', 'Skipped', 'bg-secondary');
+                jobs.national.done = true; checkAllDone();
+            } else {
+                fetch('/national/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_keys: selectedKeys }) })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error) {
+                            appendLog('national', 'Error: ' + data.error);
+                            setBadge('national', 'Error', 'bg-danger');
+                            jobs.national.done = true; checkAllDone(); return;
+                        }
+                        jobs.national.jobId = data.job_id;
+                        setBadge('national', 'Running', 'bg-info text-dark');
+                        appendLog('national', `Job ${data.job_id} started (${selectedKeys.length} datasets)`);
+                        openNationalStream(data.job_id, selectedKeys.length);
+                    })
+                    .catch(err => {
+                        appendLog('national', 'Request failed: ' + err);
+                        setBadge('national', 'Error', 'bg-danger');
+                        jobs.national.done = true; checkAllDone();
+                    });
+            }
+        }
     });
 
-    // ---- Results table -------------------------------------------------------
-    const TYPE_LABELS = {
-        board: 'Board Papers',
-        supplementary: 'Supplementary',
-        strategy: 'Strategic Reporting',
-        digital_strategy: 'Digital Strategy',
-    };
-    const TYPE_KEYS = ['board', 'supplementary', 'strategy', 'digital_strategy'];
+}());
 
-    function fetchResultsTable(jobId) {
-        fetch(`/scrape/results/${jobId}`)
+
+// ---------------------------------------------------------------------------
+// FailureLog — shows orgs with consecutive failures
+// ---------------------------------------------------------------------------
+(function FailureLog() {
+    const tbody         = document.getElementById('failureLogBody');
+    const clearAllBtn   = document.getElementById('clearAllFailuresBtn');
+    const sectionToggle = document.getElementById('failureLogSection');
+
+    if (!tbody) return;
+
+    function loadFailureLog() {
+        fetch('/scrape/failures')
             .then(r => r.json())
-            .then(rows => {
-                resultsData = rows;
-                renderResultsTable(rows);
-                if (resultsTableSection) resultsTableSection.classList.remove('d-none');
+            .then(entries => {
+                if (!entries.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">No failures recorded.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                entries.forEach(e => {
+                    const tr = document.createElement('tr');
+                    const sourceBadge = e.source === 'trust'
+                        ? '<span class="badge bg-primary">Trust</span>'
+                        : e.source === 'icb'
+                            ? '<span class="badge bg-info text-dark">ICB</span>'
+                            : '<span class="badge bg-secondary">?</span>';
+                    const reasonLabel = e.reason === 'no_results' ? 'No documents found' : 'Scrape error';
+                    tr.innerHTML = `
+                        <td>${e.name}</td>
+                        <td>${sourceBadge}</td>
+                        <td>${e.failed_at || '—'}</td>
+                        <td class="text-center"><span class="badge ${e.consecutive >= 3 ? 'bg-danger' : e.consecutive >= 2 ? 'bg-warning text-dark' : 'bg-secondary'}">${e.consecutive}</span></td>
+                        <td>${reasonLabel}</td>
+                        <td><button class="btn btn-sm btn-outline-danger btn-clear-failure" data-name="${encodeURIComponent(e.name)}">Clear</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                tbody.querySelectorAll('.btn-clear-failure').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const name = decodeURIComponent(btn.dataset.name);
+                        fetch(`/scrape/failures/${encodeURIComponent(name)}`, { method: 'DELETE' })
+                            .then(r => r.json())
+                            .then(d => { if (d.success) loadFailureLog(); })
+                            .catch(() => {});
+                    });
+                });
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Failed to load.</td></tr>';
+            });
+    }
+
+    // Load when section is opened
+    if (sectionToggle) {
+        sectionToggle.addEventListener('show.bs.collapse', loadFailureLog);
+    }
+    // Also expose for post-run refresh
+    window.loadFailureLog = loadFailureLog;
+
+    clearAllBtn && clearAllBtn.addEventListener('click', () => {
+        if (!confirm('Clear all failure records? This cannot be undone.')) return;
+        fetch('/scrape/failures/clear-all', { method: 'DELETE' })
+            .then(r => r.json())
+            .then(d => { if (d.success) loadFailureLog(); })
+            .catch(() => {});
+    });
+
+}());
+
+
+// ---------------------------------------------------------------------------
+// OrgEditor — add / edit org config entries
+// ---------------------------------------------------------------------------
+(function OrgEditor() {
+    const editorSource       = document.getElementById('editorSource');
+    const editorOrgSelect    = document.getElementById('editorOrgSelect');
+    const editorNewBtn       = document.getElementById('editorNewBtn');
+    const editorForm         = document.getElementById('editorForm');
+    const editorName         = document.getElementById('editorName');
+    const editorUrl          = document.getElementById('editorUrl');
+    const editorStartUrls    = document.getElementById('editorStartUrls');
+    const editorAllowedDomains = document.getElementById('editorAllowedDomains');
+    const editorSaveBtn      = document.getElementById('editorSaveBtn');
+    const editorCancelBtn    = document.getElementById('editorCancelBtn');
+    const editorAlert        = document.getElementById('editorAlert');
+
+    if (!editorSource) return;
+
+    let isNewMode = false;
+
+    function showAlert(msg, type) {
+        editorAlert.className = `alert alert-${type} py-2`;
+        editorAlert.textContent = msg;
+        editorAlert.classList.remove('d-none');
+    }
+
+    function clearAlert() {
+        editorAlert.classList.add('d-none');
+        editorAlert.textContent = '';
+    }
+
+    function loadOrgDropdown() {
+        const source = editorSource.value;
+        const endpoint = source === 'trust' ? '/scrape/trusts' : '/scrape/icbs';
+        editorOrgSelect.innerHTML = '<option value="">— Select to edit an existing org —</option>';
+        fetch(endpoint)
+            .then(r => r.json())
+            .then(items => {
+                items.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.textContent = t.name;
+                    editorOrgSelect.appendChild(opt);
+                });
             })
             .catch(() => {});
     }
 
-    function renderResultsTable(rows) {
-        if (!resultsTableBody) return;
-        resultsTableBody.innerHTML = '';
-        rows.forEach(row => {
-            const tr = document.createElement('tr');
-            let html = `<td>${row.trust}</td>`;
-            TYPE_KEYS.forEach(key => {
-                const val = row[key];
-                if (val && val.length) {
-                    html += `<td class="text-success fw-semibold">${val.join('<br>')}</td>`;
-                } else {
-                    html += `<td class="text-muted">—</td>`;
-                }
-            });
-            tr.innerHTML = html;
-            resultsTableBody.appendChild(tr);
-        });
-    }
+    editorSource.addEventListener('change', loadOrgDropdown);
 
-    exportCsvBtn && exportCsvBtn.addEventListener('click', () => {
-        if (!resultsData.length) return;
-        const header = ['Trust', ...TYPE_KEYS.map(k => TYPE_LABELS[k])];
-        const lines = [header.map(h => `"${h}"`).join(',')];
-        resultsData.forEach(row => {
-            const cells = [row.trust, ...TYPE_KEYS.map(k => {
-                const v = row[k];
-                return Array.isArray(v) ? v.join('; ') : (v || '—');
-            })];
-            lines.push(cells.map(c => `"${c}"`).join(','));
-        });
-        const csv = lines.join('\r\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `scrape-results-${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+    editorOrgSelect.addEventListener('change', () => {
+        const name = editorOrgSelect.value;
+        if (!name) { editorForm.classList.add('d-none'); return; }
+        const source = editorSource.value;
+        clearAlert();
+        fetch(`/config/org?name=${encodeURIComponent(name)}&source=${source}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { showAlert(data.error, 'danger'); return; }
+                isNewMode = false;
+                editorName.value          = data.name || '';
+                editorUrl.value           = data.url  || '';
+                editorStartUrls.value     = (data.start_urls || []).join('\n');
+                editorAllowedDomains.value= (data.allowed_domains || []).join(', ');
+                editorName.disabled       = true;
+                editorForm.classList.remove('d-none');
+            })
+            .catch(() => showAlert('Failed to load org data.', 'danger'));
     });
 
-    // ---- Init ----------------------------------------------------------------
-    loadTrusts();
+    editorNewBtn.addEventListener('click', () => {
+        isNewMode = true;
+        editorOrgSelect.value     = '';
+        editorName.value          = '';
+        editorUrl.value           = '';
+        editorStartUrls.value     = '';
+        editorAllowedDomains.value= '';
+        editorName.disabled       = false;
+        clearAlert();
+        editorForm.classList.remove('d-none');
+        editorName.focus();
+    });
+
+    editorCancelBtn.addEventListener('click', () => {
+        editorForm.classList.add('d-none');
+        editorOrgSelect.value = '';
+        clearAlert();
+    });
+
+    editorSaveBtn.addEventListener('click', () => {
+        clearAlert();
+        const source     = editorSource.value;
+        const name       = editorName.value.trim();
+        const url        = editorUrl.value.trim();
+        const startUrls  = editorStartUrls.value.split('\n').map(s => s.trim()).filter(Boolean);
+        const domains    = editorAllowedDomains.value.split(',').map(s => s.trim()).filter(Boolean);
+
+        if (!name) { showAlert('Organisation name is required.', 'warning'); return; }
+        if (!url)  { showAlert('Website URL is required.', 'warning'); return; }
+
+        const payload = { name, source, url, start_urls: startUrls, allowed_domains: domains.length ? domains : undefined };
+        const method  = isNewMode ? 'POST' : 'PUT';
+
+        editorSaveBtn.disabled = true;
+        fetch('/config/org', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { showAlert(data.error, 'danger'); return; }
+            showAlert(`Saved "${name}" successfully. Changes take effect on the next scrape.`, 'success');
+            editorOrgSelect.value = '';
+            editorForm.classList.add('d-none');
+            loadOrgDropdown();
+        })
+        .catch(err => showAlert('Save failed: ' + err.message, 'danger'))
+        .finally(() => { editorSaveBtn.disabled = false; });
+    });
+
+    // Initial load
+    loadOrgDropdown();
+
 }());

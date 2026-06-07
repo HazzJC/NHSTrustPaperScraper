@@ -1,15 +1,20 @@
 import asyncio
+import csv
 import datetime
+import io
 import json
 import os
 import queue
+import threading
 from pathlib import Path
 from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 from crawler.crawler import AdvancedCrawler
+from scraper.constants import REPORT_TYPES
 from scraper.engine import ScraperEngine, parse_types
+from scraper.national_engine import NationalFetchEngine
 from utils.config import Config
 from utils.pdf_analyzer import PDFAnalyzer
 from utils.results_store import ResultsStore
@@ -43,6 +48,7 @@ pdf_analyzer: PDFAnalyzer | None = None
 
 scraper_engine = ScraperEngine(
     trusts_path=Path("config/mental_health_trusts.json"),
+    icb_path=Path("config/icb_config.json"),
     output_dir=Path("downloads"),
     max_pages=int(os.getenv("MAX_PAGES_PER_SITE", "60")),
     timeout=30,
@@ -50,8 +56,13 @@ scraper_engine = ScraperEngine(
     verify_ssl=False,
 )
 
+national_engine = NationalFetchEngine(output_dir=Path("downloads"))
+
 # AdvancedCrawler kept for /test-specific-urls (ad-hoc URL crawling)
 _adv_crawler = AdvancedCrawler()
+
+# Lock for config file writes (in-process protection; one writer at a time)
+_config_lock = threading.Lock()
 
 
 # ------------------------------------------------------------------
@@ -339,6 +350,11 @@ def scrape_trusts():
     return jsonify(scraper_engine.list_trusts())
 
 
+@app.route("/scrape/icbs")
+def scrape_icbs():
+    return jsonify(scraper_engine.list_icbs())
+
+
 @app.route("/scrape/start", methods=["POST"])
 def scrape_start():
     data = request.get_json() or {}
@@ -362,9 +378,13 @@ def scrape_start():
     else:
         selected_types = {t.strip() for t in str(raw_types).split(",") if t.strip()}
 
-    unknown = selected_types - {"board", "supplementary", "strategy", "digital_strategy"}
+    unknown = selected_types - set(REPORT_TYPES.keys())
     if unknown:
         return jsonify({"error": f"Unknown types: {unknown}", "success": False}), 400
+
+    source = data.get("source", "trust")
+    if source not in ("trust", "icb"):
+        return jsonify({"error": "source must be 'trust' or 'icb'"}), 400
 
     job = scraper_engine.start_job(
         trust_names=trust_names,
@@ -378,6 +398,7 @@ def scrape_start():
         crawl_delay=crawl_delay,
         ignore_cache=ignore_cache,
         verbose=verbose,
+        source=source,
     )
     return jsonify({"job_id": job.job_id, "status": job.status, "trust_count": job.total_trusts})
 
@@ -428,6 +449,221 @@ def scrape_results(job_id: str):
     if not job:
         return jsonify({"error": "Job not found"}), 404
     return jsonify(job.summary_table())
+
+
+@app.route("/scrape/export/<job_id>")
+def scrape_export(job_id: str):
+    """Download a CSV summary of a completed scrape job."""
+    from scraper.constants import REPORT_TYPES
+    job = scraper_engine.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    rows = job.summary_table()
+    if not rows:
+        return jsonify({"error": "No results to export"}), 404
+
+    type_labels = {
+        "board": "Board Papers",
+        "supplementary": "Supplementary",
+        "strategy": "Strategic Reporting",
+        "digital_strategy": "Digital Strategy",
+        "quality_account": "Quality Account",
+        "annual_report": "Annual Report",
+        "cqc_report": "CQC Report",
+        "joint_forward_plan": "Joint Forward Plan",
+        "icb_mh_strategy": "ICB MH Strategy",
+        "integrated_care_strategy": "Integrated Care Strategy",
+    }
+    all_keys = list(REPORT_TYPES.keys())
+    active_cols = [k for k in all_keys if any(isinstance(r.get(k), list) and r[k] for r in rows)]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Organisation"] + [type_labels.get(k, k) for k in active_cols] + ["Total Found"])
+    for row in rows:
+        total = sum(len(row[k]) for k in active_cols if isinstance(row.get(k), list))
+        cells = [row["trust"]]
+        for k in active_cols:
+            v = row.get(k)
+            cells.append("; ".join(v) if isinstance(v, list) and v else "—")
+        cells.append(str(total))
+        writer.writerow(cells)
+
+    output.seek(0)
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="scrape-summary-{date_str}.csv"'},
+    )
+
+
+@app.route("/scrape/failures")
+def scrape_failures():
+    """Return failure cache entries enriched with source type (trust/icb)."""
+    trust_names = {t.name for t in scraper_engine._trusts}
+    icb_names = {t.name for t in scraper_engine._icbs}
+    entries = []
+    for entry in scraper_engine._failure_cache.get_all():
+        name = entry["name"]
+        if name in trust_names:
+            entry["source"] = "trust"
+        elif name in icb_names:
+            entry["source"] = "icb"
+        else:
+            entry["source"] = "unknown"
+        entries.append(entry)
+    entries.sort(key=lambda x: -x.get("consecutive", 0))
+    return jsonify(entries)
+
+
+@app.route("/scrape/failures/clear-all", methods=["DELETE"])
+def scrape_failures_clear_all():
+    count = scraper_engine._failure_cache.clear_all()
+    return jsonify({"success": True, "cleared": count})
+
+
+@app.route("/scrape/failures/<path:org_name>", methods=["DELETE"])
+def scrape_failure_delete(org_name: str):
+    removed = scraper_engine._failure_cache.remove(org_name)
+    if not removed:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify({"success": True, "name": org_name})
+
+
+# ------------------------------------------------------------------
+# Config / org editor routes
+# ------------------------------------------------------------------
+
+@app.route("/config/org")
+def config_org_get():
+    name = request.args.get("name", "").strip()
+    source = request.args.get("source", "trust")
+    if not name:
+        return jsonify({"error": "name parameter required"}), 400
+    pool = scraper_engine._trusts if source == "trust" else scraper_engine._icbs
+    trust = next((t for t in pool if t.name == name), None)
+    if not trust:
+        return jsonify({"error": f"Org '{name}' not found in {source} list"}), 404
+    return jsonify({
+        "name": trust.name,
+        "url": trust.url,
+        "start_urls": list(trust.start_urls),
+        "allowed_domains": list(trust.allowed_domains),
+        "search_query": trust.search_query,
+        "js_render": trust.js_render,
+    })
+
+
+@app.route("/config/org", methods=["PUT"])
+def config_org_update():
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    source = data.get("source", "trust")
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    config_path = (
+        Path("config/mental_health_trusts.json") if source == "trust"
+        else Path("config/icb_config.json")
+    )
+    with _config_lock:
+        entries = json.loads(config_path.read_text(encoding="utf-8"))
+        idx = next((i for i, e in enumerate(entries) if e.get("name") == name), None)
+        if idx is None:
+            return jsonify({"error": f"Org '{name}' not found in {config_path.name}"}), 404
+        updated = {
+            "name": name,
+            "url": data.get("url") or entries[idx].get("url"),
+            "start_urls": data.get("start_urls") or entries[idx].get("start_urls", []),
+        }
+        allowed = data.get("allowed_domains")
+        if allowed:
+            updated["allowed_domains"] = allowed
+        elif entries[idx].get("allowed_domains"):
+            updated["allowed_domains"] = entries[idx]["allowed_domains"]
+        # Preserve any other fields (e.g. icb_name, search_query, js_render)
+        for k, v in entries[idx].items():
+            if k not in updated:
+                updated[k] = v
+        entries[idx] = updated
+        config_path.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
+    scraper_engine.reload_config()
+    return jsonify({"success": True, "name": name})
+
+
+@app.route("/config/org", methods=["POST"])
+def config_org_add():
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    source = data.get("source", "trust")
+    url = data.get("url", "").strip()
+    start_urls = data.get("start_urls", [])
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    if not url:
+        return jsonify({"error": "url required"}), 400
+    config_path = (
+        Path("config/mental_health_trusts.json") if source == "trust"
+        else Path("config/icb_config.json")
+    )
+    with _config_lock:
+        entries = json.loads(config_path.read_text(encoding="utf-8"))
+        if any(e.get("name") == name for e in entries):
+            return jsonify({"error": f"Org '{name}' already exists"}), 409
+        new_entry: dict = {"name": name, "url": url, "start_urls": start_urls}
+        allowed = data.get("allowed_domains")
+        if allowed:
+            new_entry["allowed_domains"] = allowed
+        entries.append(new_entry)
+        config_path.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
+    scraper_engine.reload_config()
+    return jsonify({"success": True, "name": name}), 201
+
+
+# ------------------------------------------------------------------
+# National dataset routes
+# ------------------------------------------------------------------
+@app.route("/national/sources")
+def national_sources():
+    return jsonify(national_engine.list_sources())
+
+
+@app.route("/national/fetch", methods=["POST"])
+def national_fetch():
+    data = request.get_json() or {}
+    source_keys = data.get("source_keys") or None  # None = fetch all
+    try:
+        job = national_engine.start_job(source_keys=source_keys)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"job_id": job.job_id, "status": job.status})
+
+
+@app.route("/national/status/<job_id>")
+def national_status(job_id: str):
+    job = national_engine.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify({
+        "job_id": job.job_id,
+        "status": job.status,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at,
+        "results": [r.to_dict() for r in job.results],
+    })
+
+
+@app.route("/national/stream/<job_id>")
+def national_stream(job_id: str):
+    job = national_engine.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    return Response(
+        stream_with_context(job.iter_sse()),
+        content_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )
 
 
 # Backward-compatible redirect: old /run-crawler button now starts all-trusts scrape
