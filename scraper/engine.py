@@ -10,8 +10,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+import requests
+
 from scraper.cache import DiscoveryCache
 from scraper.constants import REPORT_TYPES
+from scraper.extraction import domain_for
 from scraper.failure_cache import FailureCache
 from scraper.discovery import (
     apply_last_modified_dates,
@@ -21,6 +24,27 @@ from scraper.discovery import (
 from scraper.downloader import download_candidate, slugify
 from scraper.models import Candidate, DownloadResult, Trust
 from scraper.session import build_session
+
+
+def _check_start_urls(session, start_urls: tuple[str, ...], timeout: int) -> list[str]:
+    """Return start_urls that appear dead or have redirected to a different domain.
+
+    Called when an org returns 0 results so the operator can fix stale config
+    entries via the Org Editor rather than having to investigate manually.
+    """
+    stale: list[str] = []
+    for url in start_urls:
+        try:
+            resp = session.get(url, timeout=timeout, allow_redirects=True)
+            if resp.status_code in (404, 410) or resp.status_code >= 500:
+                stale.append(url)
+                continue
+            # Redirect to a completely different domain indicates link rot
+            if domain_for(resp.url) != domain_for(url):
+                stale.append(url)
+        except requests.RequestException:
+            stale.append(url)
+    return stale
 
 
 def load_trusts(path: Path) -> list[Trust]:
@@ -312,10 +336,19 @@ class ScraperEngine:
             )
 
             if not chosen:
+                # Check whether configured start_urls are still valid so the
+                # operator can distinguish a stale config from a genuine gap.
+                stale_urls: list[str] = []
+                if trust.start_urls and not job.ignore_cache:
+                    stale_urls = _check_start_urls(session, trust.start_urls, self._timeout)
+                reason = "start_url_stale" if stale_urls else "no_results"
                 with job._lock:
-                    job.failed_trusts.append({"name": trust.name, "error": None, "reason": "no_results"})
-                self._failure_cache.mark_failed(trust.name, reason="no_results")
-                job.log("trust_done", trust=trust.name, downloaded=0, found=0,
+                    job.failed_trusts.append({"name": trust.name, "error": None, "reason": reason})
+                self._failure_cache.mark_failed(trust.name, reason=reason, stale_urls=stale_urls or None)
+                if stale_urls:
+                    job.log("trust_stale_urls", trust=trust.name, stale_urls=stale_urls)
+                    print(f"  No results — {len(stale_urls)} start_url(s) appear stale: {stale_urls}")
+                job.log("trust_done", trust=trust.name, index=index, downloaded=0, found=0,
                         message="No matching documents found")
                 print("  No matching documents found.")
                 with job._lock:
@@ -354,7 +387,7 @@ class ScraperEngine:
                     downloaded += 1
                     print(f"  Downloaded: {path}")
 
-            job.log("trust_done", trust=trust.name, found=len(chosen),
+            job.log("trust_done", trust=trust.name, index=index, found=len(chosen),
                     downloaded=downloaded)
 
         except Exception as exc:

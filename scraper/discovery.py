@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import email.utils
+import re
 import threading
 from pathlib import Path
 from typing import Callable
@@ -15,6 +16,16 @@ _GENERIC_LINK_TEXTS = frozenset({
     "view pdf", "download pdf", "download", "view", "open", "read more",
     "click here", "here", "pdf", "link", "document", "file",
 })
+
+# Year patterns to detect year-organised archive URLs
+_YEAR_RANGE_RE = re.compile(r'/(20\d{2})[-/](20?\d{2})/', re.I)
+_YEAR_ONLY_RE  = re.compile(r'/(20\d{2})/', re.I)
+
+# Pagination link text patterns — follow these at higher priority than nav links
+_PAGINATION_RE = re.compile(
+    r'\b(next|older|previous year|previous meetings?|more meetings?|earlier|archive)\b',
+    re.I,
+)
 from scraper.extraction import (
     document_extension,
     domain_for,
@@ -35,6 +46,44 @@ from scraper.scoring import (
 )
 from scraper.session import request_page
 from scraper.downloader import safe_filename
+
+
+def _infer_year_siblings(url: str) -> list[str]:
+    """For a URL containing a year segment, generate adjacent-year variants.
+
+    Given /board-papers/2025-26/ → also produces /board-papers/2024-25/ and
+    /board-papers/2026-27/ so the scraper proactively discovers year archives
+    without relying on explicit links to every year.
+    """
+    current_year = dt.date.today().year
+    results: list[str] = []
+
+    m = _YEAR_RANGE_RE.search(url)
+    if m:
+        start_yr = int(m.group(1))
+        sep = "-" if "-" in m.group(0)[1:] else "/"
+        for yr in (start_yr - 1, start_yr + 1):
+            if yr < 2020 or yr > current_year + 1:
+                continue
+            short_next = str(yr + 1)[-2:]
+            replacement = f"/{yr}{sep}{short_next}/"
+            new_url = _YEAR_RANGE_RE.sub(replacement, url, count=1)
+            if new_url != url:
+                results.append(new_url)
+        return list(dict.fromkeys(results))
+
+    m = _YEAR_ONLY_RE.search(url)
+    if m:
+        start_yr = int(m.group(1))
+        for yr in (start_yr - 1, start_yr + 1):
+            if yr < 2020 or yr > current_year + 1:
+                continue
+            new_url = _YEAR_ONLY_RE.sub(f"/{yr}/", url, count=1)
+            if new_url != url:
+                results.append(new_url)
+        return list(dict.fromkeys(results))
+
+    return []
 
 
 def discover_candidates(
@@ -130,23 +179,29 @@ def discover_candidates(
                     queued_urls.add(nav_url)
             queue.sort(reverse=True)
 
-        for link_url, link_text in iter_links(html, final_page_url):
+        for link_url, link_text, context_text in iter_links(html, final_page_url):
             if not site_allowed(link_url, allowed_domains):
                 continue
 
-            combined_text = f"{link_text} {link_url}"
+            # Include surrounding DOM context so dates/types in <li> wrappers and
+            # <h3> headings are available to classification and date extraction.
+            combined_text = f"{link_text} {context_text} {link_url}"
+
             if looks_like_document_link(link_url, link_text):
                 report_type, type_score = classify_report_type(combined_text, selected_types)
                 if not report_type or link_url in seen_candidates:
                     continue
 
                 found_date, date_source = extract_date(combined_text)
-                # Prefer URL path stem over generic link labels like "View PDF"
+                # Prefer surrounding context over generic labels like "View PDF"
                 meaningful_text = (
                     link_text
                     if link_text and link_text.lower().strip() not in _GENERIC_LINK_TEXTS
                     else ""
                 )
+                if not meaningful_text and context_text:
+                    # Use context text (trimmed) as title fallback
+                    meaningful_text = context_text[:80].strip()
                 title = safe_filename(
                     meaningful_text or Path(urlparse(link_url).path).stem, max_length=90
                 )
@@ -169,16 +224,31 @@ def discover_candidates(
                         ),
                     )
                 )
+                # Infer adjacent year-archive pages from year patterns in the doc URL
+                if not fast_check:
+                    for yr_url in _infer_year_siblings(link_url):
+                        add_queue_url(
+                            queue, yr_url, score=130,
+                            seen_pages=seen_pages, queued_urls=queued_urls,
+                        )
                 continue
 
             if not fast_check and looks_like_html_page(link_url):
-                add_queue_url(
-                    queue,
-                    link_url,
-                    score=page_relevance_score(combined_text, selected_types),
-                    seen_pages=seen_pages,
-                    queued_urls=queued_urls,
-                )
+                # Pagination links ("next", "older meetings") get higher priority
+                # so year archives are explored before exhausting max_pages on nav.
+                if _PAGINATION_RE.search(link_text):
+                    add_queue_url(
+                        queue, link_url, score=140,
+                        seen_pages=seen_pages, queued_urls=queued_urls,
+                    )
+                else:
+                    add_queue_url(
+                        queue,
+                        link_url,
+                        score=page_relevance_score(combined_text, selected_types),
+                        seen_pages=seen_pages,
+                        queued_urls=queued_urls,
+                    )
 
     return candidates
 

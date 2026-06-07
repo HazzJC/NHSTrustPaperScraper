@@ -61,16 +61,16 @@
     "url": "https://www.cnwl.nhs.uk/",
     "icb_name": "NHS North West London ICB",
     "start_urls": [
-      "https://www.cnwl.nhs.uk/about/trust-board/board-meetings-and-papers/"
+      "https://www.cnwl.nhs.uk/about/planning-performance-and-reports"
     ]
   },
   {
     "name": "Cheshire and Wirral Partnership NHS Foundation Trust",
     "url": "https://www.cwp.nhs.uk/",
-    "icb_name": "NHS Cheshire and Merseyside ICB",
     "start_urls": [
-      "https://www.cwp.nhs.uk/about-us/trust-board/board-papers/"
-    ]
+      "https://www.cwp.nhs.uk/about-us/our-board-and-governors"
+    ],
+    "icb_name": "NHS Cheshire and Merseyside ICB"
   },
   {
     "name": "Cornwall Partnership NHS Foundation Trust",
@@ -107,10 +107,10 @@
   {
     "name": "Devon Partnership NHS Trust",
     "url": "https://www.dpt.nhs.uk/",
-    "icb_name": "NHS Devon ICB",
     "start_urls": [
-      "https://www.dpt.nhs.uk/about-us/trust-board/board-papers/"
-    ]
+      "https://www.dpt.nhs.uk/publications/"
+    ],
+    "icb_name": "NHS Devon ICB"
   },
   {
     "name": "Dorset Healthcare University NHS Foundation Trust",
@@ -177,7 +177,7 @@
     "url": "https://www.hpft.nhs.uk/",
     "icb_name": "NHS Hertfordshire and West Essex ICB",
     "start_urls": [
-      "https://www.hpft.nhs.uk/about-us/trust-board/board-papers/"
+      "https://www.hpft.nhs.uk/about-us/our-board-papers-and-publications/"
     ]
   },
   {
@@ -282,7 +282,7 @@
     "url": "https://www.combined.nhs.uk/",
     "icb_name": "NHS Staffordshire and Stoke-on-Trent ICB",
     "start_urls": [
-      "https://www.combined.nhs.uk/about-us/trust-board/board-papers/"
+      "https://www.combined.nhs.uk/about/our-board/board-meetings/"
     ]
   },
   {
@@ -322,7 +322,7 @@
     "url": "https://www.penninecare.nhs.uk/",
     "icb_name": "NHS Greater Manchester ICB",
     "start_urls": [
-      "https://www.penninecare.nhs.uk/about-us/trust-board/board-papers/"
+      "https://www.penninecare.nhs.uk/boardmeetings"
     ]
   },
   {
@@ -346,7 +346,7 @@
     "url": "https://www.southwestyorkshire.nhs.uk/",
     "icb_name": "NHS West Yorkshire ICB",
     "start_urls": [
-      "https://www.southwestyorkshire.nhs.uk/about-us/trust-board/board-papers/"
+      "https://www.southwestyorkshire.nhs.uk/about-us-2/how-were-run/our-trust-board/meeting-papers/"
     ]
   },
   {

@@ -165,7 +165,10 @@
         if (bar)   bar.style.width = pct + '%';
         if (count) count.textContent = total > 0 ? `${done} / ${total}` : '';
     }
-    function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+    function cap(s) {
+        const CAPS = { icb: 'ICB', trust: 'Trust', national: 'National' };
+        return CAPS[s] !== undefined ? CAPS[s] : s.charAt(0).toUpperCase() + s.slice(1);
+    }
 
     function markSlotDone(source, success) {
         const slot = document.getElementById('progress' + cap(source));
@@ -245,6 +248,8 @@
                 setProgress(source, index || jobs[source].completed, jobs[source].total);
                 appendLog(source, `  ✓ found ${found || 0}, downloaded ${downloaded || 0}`);
             } else if (event === 'trust_error') {
+                jobs[source].completed++;
+                setProgress(source, jobs[source].completed, jobs[source].total);
                 appendLog(source, `  ✗ ERROR: ${error || 'unknown'}`);
             } else if (event === 'candidate_found') {
                 appendLog(source, `  → [${msg.report_type}] ${msg.date} ${msg.url}`);
@@ -594,7 +599,16 @@
                         : e.source === 'icb'
                             ? '<span class="badge bg-info text-dark">ICB</span>'
                             : '<span class="badge bg-secondary">?</span>';
-                    const reasonLabel = e.reason === 'no_results' ? 'No documents found' : 'Scrape error';
+                    let reasonLabel;
+                    if (e.reason === 'start_url_stale') {
+                        const urls = (e.stale_urls || []).map(u => `<li class="text-truncate" style="max-width:320px" title="${u}">${u}</li>`).join('');
+                        reasonLabel = `<span class="badge bg-warning text-dark me-1" title="One or more start URLs are returning 404 or redirecting away. Fix via Org Editor.">⚠ Stale start URL</span>`
+                            + (urls ? `<ul class="mb-0 ps-3 mt-1 text-muted" style="font-size:0.7rem">${urls}</ul>` : '');
+                    } else if (e.reason === 'error') {
+                        reasonLabel = '<span class="text-danger">Scrape error</span>';
+                    } else {
+                        reasonLabel = 'No documents found';
+                    }
                     tr.innerHTML = `
                         <td>${e.name}</td>
                         <td>${sourceBadge}</td>

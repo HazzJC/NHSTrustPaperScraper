@@ -8,14 +8,21 @@ from scraper.constants import NAV_PATH_FRAGMENTS, REPORT_TYPES
 
 
 def term_hits(text: str, terms: Iterable[str]) -> int:
+    """Count how many terms appear in text as whole words.
+
+    Uses word boundaries for all terms so 'board' does not match 'keyboard'
+    and 'strategy' does not match 'strategist'. Hyphens are treated as
+    optional whitespace, so 'board-paper' matches the pattern 'board paper'.
+    """
     haystack = text.lower()
     hits = 0
     for term in terms:
-        normalized = term.lower()
-        if len(normalized) <= 3:
-            if re.search(rf"\b{re.escape(normalized)}\b", haystack):
-                hits += 1
-        elif normalized in haystack:
+        # Normalise term: hyphens become optional whitespace-or-hyphen
+        normalised = term.lower()
+        # Escape then replace escaped-space with a [\s\-]+ group so that
+        # "board paper" matches both "board paper" and "board-paper"
+        escaped = re.escape(normalised).replace(r"\ ", r"[\s\-]+")
+        if re.search(rf"\b{escaped}\b", haystack):
             hits += 1
     return hits
 
@@ -76,9 +83,9 @@ def candidate_score(
         score += 50
     if found_date:
         score += 40
-    if "draft" in haystack:
+    if re.search(r"\bdraft\b", haystack):
         score -= 15
-    if "minute" in haystack and "supplementary" not in haystack:
+    if re.search(r"\bminutes?\b", haystack) and "supplementary" not in haystack:
         score -= 25
     return score
 

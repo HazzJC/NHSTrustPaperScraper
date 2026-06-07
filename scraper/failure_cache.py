@@ -37,15 +37,23 @@ class FailureCache:
         with self._lock:
             return set(self._data.keys())
 
-    def mark_failed(self, trust_name: str, reason: str = "no_results") -> None:
+    def mark_failed(
+        self,
+        trust_name: str,
+        reason: str = "no_results",
+        stale_urls: list[str] | None = None,
+    ) -> None:
         """Record that this trust produced 0 results or errored."""
         with self._lock:
             existing = self._data.get(trust_name, {})
-            self._data[trust_name] = {
+            entry: dict = {
                 "failed_at": dt.date.today().isoformat(),
                 "consecutive": existing.get("consecutive", 0) + 1,
                 "reason": reason,
             }
+            if stale_urls:
+                entry["stale_urls"] = stale_urls
+            self._data[trust_name] = entry
             self._save()
 
     def mark_succeeded(self, trust_name: str) -> None:
