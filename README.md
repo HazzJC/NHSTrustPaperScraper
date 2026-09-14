@@ -1,186 +1,62 @@
-# NHS Evidence Scraper & Sales Intelligence Platform
+# NHS Evidence Scraper
 
-Scrapes documents from all 47 NHS Mental Health Trusts, 42 ICBs/Commissioners, and 8 national NHS datasets. 
-Downloads PDFs and allows for manual corrections of broken links. Future planning to allow AI summarising of data. 
+A document-discovery tool for people who track NHS mental health trust and ICB governance — analysts, researchers, and market/policy teams who currently do this by hand — that crawls trust and ICB websites for board papers, quality accounts, and strategy documents, and mirrors 8 national NHS datasets locally for offline analysis.
 
 ---
 
-## Quick Start
+## Sample output
 
-### 0. Download ZIP and extract into folder of your choice. 
+The scraper writes one metadata record per document found. This is real output from a previous run against a single trust, checked into the repo at [`test_specific_urls_results.json`](test_specific_urls_results.json):
 
-### 1. Install dependencies: Open Powershell, change directory to the folder.
+```json
+{
+  "title": "February 2025 Public Board Papers",
+  "url": "https://www.hct.nhs.uk/download/public-board-papers-11-feb-2025pdf.pdf?ver=14539&doc=docm93jijm4n10889.pdf",
+  "date": "february 2025",
+  "organization": "HCT",
+  "org_type": "Trust",
+  "org_url": "https://www.hct.nhs.uk/",
+  "found_page": "https://www.hct.nhs.uk/our-board"
+}
+```
+
+Each downloaded file also gets a `.metadata.json` sidecar (source URL, date, report type, scoring detail) alongside it in `downloads/<trust>/<year>/`.
+
+No live demo or hosted instance exists — this is a local Flask dashboard plus a standalone CLI script, run on your own machine against your own `downloads/` folder.
+
+---
+
+## What's verified vs. experimental
+
+This project has two distinct halves that earlier versions of this README blurred together. They are **not equally trustworthy**:
+
+| | Status | Evidence |
+|---|---|---|
+| **Scraping & downloading** (`scraper/`, `scrape_latest_board_papers.py`) | Working, covered by tests | 8 unit test modules (162+ cases) mocking HTTP responses, retry logic, scoring, and extraction — see [Verified quality evidence](#verified-quality-evidence) |
+| **"Sales Intelligence" AI layer** (`intelligence/`, Gemini-powered extraction/RAG/pitch generation) | **Experimental — explicitly untested, no automated tests, no verified output** | Zero test files under `tests/` reference `intelligence/`; requires a paid Gemini API key; output has not been checked for accuracy |
+
+The AI layer is real code that runs, but nobody has verified its output is correct, and it isn't exercised by CI or the test suite. Treat anything it produces (extracted "opportunities," procurement signal classification, generated pitches/emails, natural-language answers) as an unverified draft, not a source of truth — see [Experimental: AI features](#experimental-ai-features-untested) below for what it does and how to disable it.
+
+---
+
+## Quick start (scraping — the verified path)
 
 ```powershell
+git clone https://github.com/HazzJC/NHSTrustPaperScraper.git
+cd NHSTrustPaperScraper
 pip install -r requirements.txt
-```
-
-### 2. OPTIONAL - CURRENTLY UNTESTED AND NEEDS FURTHER WORK - Set your Gemini API key 
-
-Create a `.env` file:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Open `.env` and add:
-
-```
-GEMINI_API_KEY=your-gemini-api-key-here
-SECRET_KEY=any-random-string
-```
-
-> The key is required for Sales Pipeline features (AI extraction, NL search, pitch generation). Scraping and downloading works without it.
-
-### 3. Start the dashboard
-
-```powershell
 python app.py
 ```
 
-Open **http://localhost:5002**.
+Open **http://localhost:5002** and tick a source (Trusts / ICBs / National datasets) to start a scrape. No API key is needed for this.
 
----
-
-## What You Can Do
-
-| Feature | Where |
-|---|---|
-| Scrape NHS trust documents (47 trusts, 7 types) | Dashboard → tick **NHS Mental Health Trusts** |
-| Scrape ICB / commissioner documents (42 ICBs, 3 types) | Dashboard → tick **ICBs / Commissioners** |
-| Download national NHS datasets (8 sources) | Dashboard → tick **National NHS Datasets** |
-| Run all three sources simultaneously | Tick all three → **Start Selected Sources** |
-| Download summary CSV after each run | Results section → **Download Summary (CSV)** |
-| View which orgs consistently fail | Dashboard → **Failure Log** |
-| Manually add or fix website URLs | Dashboard → **Organisation Editor** |
-UNTESTED | Extract AI sales intelligence from PDFs | **Sales Intelligence** tab | 
-UNTESTED | Ask natural language questions | Intelligence → **Ask a Question** |  
-UNTESTED | Find trusts that match your product | Intelligence → **Supplier Matching** | 
-UNTESTED | Generate outreach emails | Intelligence → **Generate Pitch & Email** | 
-
----
-
-## Scraping Documents
-
-### Using the Dashboard
-
-1. Open **http://localhost:5002**
-2. Tick one or more sources: **NHS Mental Health Trusts**, **ICBs / Commissioners**, **National NHS Datasets**
-3. Each source expands to show its own configuration:
-   - Tick the document types you want
-   - Set a lookback period per type (months, 0 = no limit)
-   - Select specific organisations or leave all deselected to run all
-4. Set shared settings: parallel workers, request delay, max releases per type
-5. Click **Start Selected Sources** — all ticked sources run simultaneously
-6. Progress streams live per source; when done a results table appears
-7. Click **Download Summary (CSV)** to export a spreadsheet of what was found
-
-### Document Types
-
-#### Trust documents
-
-| Key | What it is | Default lookback |
-|---|---|---|
-| Board Papers | Full board meeting packs and agendas | 3 months |
-| Quality Account | Annual quality improvement reports | 24 months |
-| Annual Report | Annual report and accounts | 24 months |
-| Strategic Reporting | Trust strategy and long-term plans | 36 months |
-| Digital Strategy | Digital and technology strategies | 36 months |
-| Supplementary | Supporting papers and appendices | 3 months |
-| CQC Report | CQC inspection reports | 36 months |
-
-#### ICB / Commissioner documents
-
-| Key | What it is |
-|---|---|
-| Joint Forward Plan | 5-year NHS system plan (mandated by NHS England) |
-| ICB MH Strategy | Mental health and SMI strategies |
-| Integrated Care Strategy | ICS health and wellbeing strategies |
-
-#### National datasets
-
-| Key | Source | Format |
-|---|---|---|
-| MHSDS | NHS Mental Health Services Data Set — monthly statistics | XLSX/CSV |
-| OAP | Out of Area Placements (archived April 2024, now in MHSDS) | CSV |
-| CQC Survey | CQC Community Mental Health Survey | ODS/XLSX |
-| NCAP | National Clinical Audit of Psychosis | PDF |
-| Fingertips | OHID Adult Mental Health profile | CSV |
-| QOF | Quality and Outcomes Framework SMI registers | XLSX |
-| PHSMI | Physical Health Checks for SMI (quarterly) | CSV |
-| Oversight | NHS Oversight Framework segmentation tables | CSV/XLSX |
-
-National dataset files are saved to `downloads/national/<source>/` and skipped on re-runs if already present.
-
-### Where files are saved - downloads to the /downloads folder of the unzipped folder. 
-
-```
-downloads/
-  birmingham-and-solihull-mental-health.../
-    2026/
-      [2026-06-03]_Birmingham_..._board_Public-Board-of-Directors.pdf
-      [2026-06-03]_....metadata.json
-  national/
-    mhsds/
-      Mental-Health-Services-Monthly-Statistics-Performance-May-2026.xlsx
-    cqc-survey/
-      2026_community_mental_health_benchmark.ods
-    ...
-```
-
-Each scraped file gets a `.metadata.json` sidecar with the source URL, date, report type, and scoring details (scoring details to be improved)
-
-### Rate limiting
-
-If NHS sites return 429 errors, increase the **Request delay** slider (1–2s is usually sufficient). The scraper automatically retries 429 responses up to 3 times, using the `Retry-After` header when present.
-
----
-
-## Failure Log & Caching
-
-The dashboard includes a **Failure Log** showing every organisation that returned no documents on its last run, sorted by consecutive failure count. Organisations with 3+ consecutive failures are highlighted in red.
-
-On re-runs, previously-failed organisations are fast-checked against their cached known-good pages first — this avoids wasting time re-crawling dead start URLs. If that finds nothing, a full crawl runs as a fallback.
-
-To investigate persistent failures, open the **Organisation Editor** and add the correct document directory URL as a start URL.
-
----
-
-## Organisation Editor
-
-The **Organisation Editor** (bottom of dashboard) lets you add or edit website entries without touching config files directly.
-
-- **Edit existing** — select an organisation from the dropdown, update its base URL, start URLs, or allowed domains, and save
-- **Add new** — click "+ Add New", fill in the form, and save; the entry is immediately available for the next scrape
-
-Start URLs are the specific pages the crawler begins from (e.g. `.../publications/board-papers/`). The crawler follows links from these pages up to the configured max-pages limit.
-
-Allowed domains (optional) restrict which domains the crawler will follow links to — useful for ICBs whose documents live on a partner site.
-
-Changes are written to `config/mental_health_trusts.json` or `config/icb_config.json` and take effect immediately.
-
----
-
-## Using the Command Line
+Or use the CLI directly, without the dashboard:
 
 ```bash
-# Download latest board paper from every trust
-python scrape_latest_board_papers.py
-
-# Preview without downloading
-python scrape_latest_board_papers.py --dry-run
-
-# One trust only
+python scrape_latest_board_papers.py --dry-run          # preview, no downloads
 python scrape_latest_board_papers.py --only "Birmingham" --dry-run
-
-# Multiple releases per trust
 python scrape_latest_board_papers.py --limit-per-type 3
-
-# Include strategy documents
-python scrape_latest_board_papers.py --include-strategy
 ```
-
-#### CLI options
 
 | Option | Default | What it does |
 |---|---|---|
@@ -192,160 +68,125 @@ python scrape_latest_board_papers.py --include-strategy
 | `--max-pages N` | `60` | Crawl depth per site |
 | `--output folder` | `downloads` | Download location |
 
----
-
-## Sales Intelligence Platform
-
-The Intelligence Platform reads downloaded PDFs and uses Gemini AI to extract structured insights.
-
-### Run the pipeline
-
-1. Download some papers (see above)
-2. Open **http://localhost:5002/intelligence**
-3. Click **Run Pipeline**
-
-The pipeline extracts opportunities, procurement signals, timeline events, and generates a written intelligence profile per trust.
-
-### Explore results
-
-Select any trust from the left panel to see:
-- **Profile** — digital strategy, priorities, challenges, financials
-- **Opportunities** — categorised with confidence scores and evidence quotes
-- **Procurement Signals** — classified by intent (high / medium / early stage)
-- **Timeline** — upcoming milestones and dates
-
-### Ask a question
-
-```
-Which trusts mention ambient voice technology?
-Which trusts have approved AI budgets this year?
-Which trusts are planning an EPR replacement?
-```
-
-### Match your product to trusts
-
-Paste a product description into **Supplier Matching** to get a ranked list of trusts with supporting evidence.
-
-### Generate an outreach email
-
-Select a trust and click **Generate Pitch & Email** for a tailored value proposition, email draft, and discovery call questions.
+A minimal `requirements-basic.txt` (requests, beautifulsoup4, urllib3) covers just the scraping path if you don't want the Flask/AI dependencies.
 
 ---
 
-## Project Structure
+## What's actually covered
 
-```
-├── scraper/
-│   ├── constants.py          URL patterns, keywords, all 10 report type definitions
-│   ├── discovery.py          Main crawl loop
-│   ├── scoring.py            Keyword scoring and type classification
-│   ├── downloader.py         File download and naming
-│   ├── engine.py             ScraperEngine — trust + ICB scraping, job management
-│   ├── national_datasets.py  8 national dataset fetchers
-│   ├── national_engine.py    NationalFetchEngine — job management for national fetches
-│   ├── failure_cache.py      Tracks orgs with no results for fast-check optimisation
-│   └── session.py            HTTP session, 429 retry with backoff
-│
-├── intelligence/
-│   ├── database.py           SQLite schema (SQLAlchemy)
-│   ├── pipeline.py           PDF extraction + Gemini AI analysis
-│   ├── runner.py             Background job runner
-│   ├── embeddings.py         ChromaDB vector search + RAG
-│   └── matching.py           Supplier matching + pitch generation
-│
-├── config/
-│   ├── mental_health_trusts.json   47 trust entries with URLs and start_urls
-│   └── icb_config.json             42 ICB entries with URLs and start_urls
-│
-├── data/
-│   ├── failure_cache.json    Per-org failure history (auto-managed)
-│   └── discovery_cache.json  Per-org known-good page cache (auto-managed)
-│
-├── templates/
-│   ├── index.html            Evidence scraper dashboard
-│   └── intelligence.html     Sales Intelligence dashboard
-│
-├── app.py                    Flask app and all routes
-└── requirements.txt
-```
+Coverage is real, curated config, not a live directory of every NHS organisation — see [Limitations](#limitations) for what that means in practice.
+
+- **47 NHS Mental Health Trusts** — board papers, quality accounts, annual reports, strategic/digital strategy documents, supplementary papers, CQC reports (7 document types, config in `config/mental_health_trusts.json`)
+- **42 ICBs / Commissioners** — Joint Forward Plans, MH strategies, Integrated Care Strategies (config in `config/icb_config.json`)
+- **8 national NHS datasets** — MHSDS, OAP, CQC Community MH Survey, NCAP, Fingertips, QOF, PHSMI, NHS Oversight Framework (fetched directly from their publishing sources, saved to `downloads/national/<source>/`)
+
+Both config files are hand-maintained lists of known URLs and start pages, editable via the **Organisation Editor** in the dashboard or by hand.
 
 ---
 
-## API Reference
+## Responsible data access
 
-### Scraping
+This scrapes live NHS trust and ICB websites, so the plan for this project requires documenting exactly what protects those sites from being hammered. Here's what's actually in the code (`scraper/session.py`, `scraper/engine.py`), verified by reading it, not assumed:
 
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/scrape/trusts` | List all 47 trusts |
-| `GET` | `/scrape/icbs` | List all 42 ICBs |
-| `POST` | `/scrape/start` | Start a scrape job (`source`: `trust` or `icb`) |
-| `GET` | `/scrape/stream/<job_id>` | Live SSE log stream |
-| `GET` | `/scrape/status/<job_id>` | Job status JSON |
-| `GET` | `/scrape/results/<job_id>` | Results table JSON |
-| `GET` | `/scrape/export/<job_id>` | Download results as CSV |
-| `DELETE` | `/scrape/cancel/<job_id>` | Cancel a running job |
-| `GET` | `/scrape/failures` | List failure cache entries |
-| `DELETE` | `/scrape/failures/<name>` | Clear one failure entry |
-| `DELETE` | `/scrape/failures/clear-all` | Clear all failure entries |
+**Present:**
+- **Identifying User-Agent** — a standard browser UA string is sent on every request (not a custom/identifying one naming the project or a contact — see below)
+- **Configurable request delay** — default 0.5s between requests, adjustable 0–5s via the dashboard slider or `crawl_delay` parameter
+- **429-aware retry with backoff** — on a 429 response, the scraper honours the `Retry-After` header when present, otherwise backs off exponentially (`min(60, 5 × 2^attempt)`), up to 3 retries (`scraper/session.py`, covered by `tests/test_session.py`)
+- **Bounded crawl depth** — `max_pages` caps how many pages per site are visited per job (default 60, capped at 200)
+- **Result caching** — previously-successful pages are cached (`data/discovery_cache.json`) and failing orgs are fast-checked against known-good pages before a full re-crawl, reducing repeat load on sites that already failed (`scraper/failure_cache.py`)
+- **Concurrency cap** — parallel trust/ICB fetches are capped at 10 simultaneous workers
 
-### National Datasets
+**Missing / not yet addressed:**
+- **No `robots.txt` checking anywhere in the codebase** — the crawler does not fetch or respect `robots.txt` disallow rules on any target site. This is the most significant gap for a tool that crawls dozens of third-party NHS domains and should be treated as a known limitation, not an oversight that's been designed around.
+- **No project-identifying User-Agent or contact string** — the UA string is a generic desktop Chrome string, not something a trust's ops team could trace back to this project or reach out about. Standard scraping etiquette (and NHS trusts' own acceptable-use pages, where published) generally expects a UA that names the tool and gives a contact method.
+- **TLS verification is disabled by default** (`ScraperEngine(verify_ssl=False)` in `scraper/engine.py`) — requests to trust sites don't validate certificates unless explicitly overridden.
+- **No per-trust terms-of-use or acceptable-use review** — individual NHS trust/ICB websites may publish their own scraping/automated-access terms; this project does not check for or track them per-domain.
 
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/national/sources` | List all 8 dataset sources |
-| `POST` | `/national/fetch` | Start a fetch job (`source_keys`: list or null for all) |
-| `GET` | `/national/stream/<job_id>` | Live SSE stream (named events) |
-| `GET` | `/national/status/<job_id>` | Job status JSON |
+If you run this against live NHS infrastructure, keep the request delay at 1–2s (the README previously recommended this only as a fix for 429s; treat it as the sane default instead), avoid `--all-matches` runs across all 47+42 orgs back-to-back, and don't run it as a recurring/scheduled job without adding `robots.txt` support first.
 
-### Config / Org Editor
+---
 
-| Method | Route | Description |
-|---|---|---|
-| `GET` | `/config/org?name=&source=` | Get one org's config |
-| `PUT` | `/config/org` | Update an existing org |
-| `POST` | `/config/org` | Add a new org |
+## Architecture
 
-### Sales Intelligence
+```
+scraper/
+  constants.py          URL patterns, keywords, 10 report-type definitions
+  discovery.py           Crawl loop — follows links from configured start URLs
+  scoring.py              Keyword scoring and document-type classification
+  downloader.py          File download and naming
+  engine.py                ScraperEngine — trust + ICB job management, threading
+  national_datasets.py  8 national dataset fetchers (direct downloads, not crawled)
+  national_engine.py    NationalFetchEngine — job manager for national fetches
+  failure_cache.py        Tracks orgs with no results, for fast-check on retry
+  session.py                HTTP session: UA, timeout, 429 retry/backoff, crawl delay
 
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/intelligence/run` | Start the intelligence pipeline |
-| `GET` | `/intelligence/trusts` | List trusts with counts |
-| `GET` | `/intelligence/trust/<name>` | Full profile for one trust |
-| `GET` | `/intelligence/opportunities` | All opportunities (`?category=&trust=&min_confidence=`) |
-| `GET` | `/intelligence/search?q=` | Keyword search across insights |
-| `GET` | `/intelligence/ask?q=` | Natural language RAG search |
-| `POST` | `/match-supplier` | Rank trusts by relevance |
-| `POST` | `/generate-pitch` | Generate pitch and email for a trust |
+intelligence/            EXPERIMENTAL — see below. Not covered by tests.
+  database.py, pipeline.py, runner.py, embeddings.py, matching.py
+
+config/
+  mental_health_trusts.json   47 trust entries: name, base URL, start URLs
+  icb_config.json                    42 ICB entries: name, base URL, start URLs
+
+data/                          Auto-managed caches (failure_cache.json, discovery_cache.json)
+templates/, static/    Flask dashboard UI
+app.py                        Flask app and all routes
+```
+
+The dashboard (`app.py` + `templates/index.html`) is a thin UI over `ScraperEngine` / `NationalFetchEngine`; `scrape_latest_board_papers.py` is an independent CLI entry point into the same `scraper/` package, so scraping logic is exercised both ways.
+
+---
+
+## Verified quality evidence
+
+- **8 test modules, 1,372 lines, covering the scraping path**: `tests/test_session.py` (retry/backoff/429 handling — happy path, HTTP errors, network errors, crawl delay), `tests/test_engine.py`, `tests/test_extraction.py`, `tests/test_failure_cache.py`, `tests/test_national_datasets.py`, `tests/test_scoring.py`, `tests/test_app_routes.py`. All use mocked HTTP responses (`unittest.mock`) — they do not hit live NHS sites.
+- Run them yourself:
+  ```bash
+  pip install -r requirements.txt
+  pytest
+  ```
+- **CI gap, stated plainly**: `.github/workflows/ci.yml` currently runs `pre-commit` (isort, black, yaml/whitespace checks) on pull requests — it does **not** run `pytest`. The test suite exists and passes locally but is not enforced automatically yet. Treat "tests exist" and "tests are checked in CI" as two different claims until that's wired up.
+- No test coverage exists for `intelligence/` — see below.
+
+---
+
+## Experimental: AI features (untested)
+
+`intelligence/` uses Google's Gemini API to read downloaded PDFs and produce structured summaries, a natural-language Q&A search (RAG via ChromaDB + sentence-transformers embeddings), supplier-to-trust matching, and draft outreach emails/pitches, surfaced at `/intelligence` in the dashboard.
+
+**This is explicitly unverified.** No automated tests exist for any of `intelligence/database.py`, `pipeline.py`, `runner.py`, `embeddings.py`, or `matching.py`, and no sample output from this layer has been checked for accuracy against source documents. Extraction quality, hallucination risk, and correctness of "confidence scores" are all unknown.
+
+If you want to try it anyway: it requires a `GEMINI_API_KEY` in a `.env` file (copy `.env.example`) and the full `requirements.txt` (chromadb, sentence-transformers, google-genai). Without a key, `/intelligence` routes return `503` and the rest of the app — scraping and downloading — works normally. If you don't set the key, none of this code path runs.
+
+Do not rely on this for anything where accuracy matters until it has test coverage and someone has checked its output against ground truth.
+
+---
+
+## Limitations
+
+- **Coverage is a curated list, not the whole NHS.** 47 mental health trusts and 42 ICBs are hand-maintained in `config/*.json`; acute, community, and ambulance trusts outside that list aren't covered. Adding an org means adding a config entry, not something the tool discovers automatically.
+- **No `robots.txt` support** (see [Responsible data access](#responsible-data-access) above) — the single biggest thing to fix before running this unattended or at scale.
+- **Site-specific brittleness.** Trusts that require JavaScript to render their document list need `"js_render": true` set manually per config entry; sites that change their page structure will silently return fewer/no results until someone updates `COMMON_PATHS`/start URLs.
+- **AI features are untested** (see above) — excluded from anything described as "working" in this README.
+- **CI does not run the test suite** (see above) — only linting is automated today.
+- **TLS verification is off by default** for scraped sites.
+- **No hosted/demo instance.** This runs locally against your own filesystem; there's nothing to click a link to.
 
 ---
 
 ## Troubleshooting
 
-### A trust or ICB is not finding documents
+**A trust or ICB isn't finding documents** — check the **Failure Log** in the dashboard, then use the **Organisation Editor** to add the correct publications page as a start URL; re-run with dry-run first to confirm.
 
-1. Open the **Failure Log** to see its failure history
-2. Open the **Organisation Editor**, select the org, and add the specific publications page as a start URL (e.g. `https://www.example.nhs.uk/about-us/publications/`)
-3. Re-run with **Dry run** ticked to confirm documents are now found before downloading
+**429 rate-limit errors** — increase the request delay slider to 1–2s. Retries are automatic, but a higher base delay avoids triggering the limit at all.
 
-### The scraper visits the right page but finds no PDFs
+**The scraper visits the right page but finds no PDFs** — the site likely needs JavaScript to render its document list; set `"js_render": true` on that config entry.
 
-The site may require JavaScript to load its document list. Add `"js_render": true` to that entry in the config file.
+**`GEMINI_API_KEY is not set`** — expected if you haven't configured the (experimental, untested) AI layer. Scraping and downloading work without it.
 
-### Getting 429 rate-limit errors
+---
 
-Increase the **Request delay** slider to 1–2 seconds. The scraper already retries automatically on 429, but a higher base delay prevents hitting the limit in the first place.
+## Attribution & data provenance
 
-### Pipeline says GEMINI_API_KEY is not set
+All documents fetched by this tool originate from the public-facing websites of NHS trusts, ICBs, and national NHS/OHID/CQC data publishers — this project does not host, mirror, or redistribute any content beyond what each organisation already publishes openly. Source URL and retrieval date are recorded in every file's `.metadata.json` sidecar so provenance is always traceable back to the original publisher. See [Responsible data access](#responsible-data-access) for what governs how those sites are accessed.
 
-Add it to your `.env` file. Plain scraping works without the key.
-
-### Slow scraping
-
-Default 0.5s delay is intentional but sometimes hits rate limiting. The service can scrape multiple trusts at once to try and expediate this, but a full run can still take 10-15 minutes. If hitting errors, increase the delay to 1 second. Subsequent runs cache successful locations so will be quicker. 
-
-### TO DO ###
-- Improve file naming and structure
-- Enhance / Implement better scoring for files and keyword searches
-- Add analytics or provide companion app with analytical platform for lead generation 
+Maintained by [HazzJC](https://github.com/HazzJC).
