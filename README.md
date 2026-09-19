@@ -1,5 +1,7 @@
 # NHS Evidence Scraper
 
+![NHS Evidence Scraper Dashboard and Pipeline Overview](docs/social-preview.png)
+
 A document-discovery tool for people who track NHS mental health trust and ICB governance — analysts, researchers, and market/policy teams who currently do this by hand — that crawls trust and ICB websites for board papers, quality accounts, and strategy documents, and mirrors 8 national NHS datasets locally for offline analysis.
 
 ---
